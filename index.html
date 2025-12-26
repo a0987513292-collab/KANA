@@ -2,270 +2,280 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>日文假名快速訓練</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>日文單字練習 - 100 單字</title>
 <style>
-body{
-    background:#121212;
-    color:#e0e0e0;
-    font-family:sans-serif;
-    margin:0;
-    padding:14px;
-    touch-action: manipulation;
+body {
+    font-family: Arial, sans-serif;
+    background-color: #121212;
+    color: #ffffff;
+    margin: 0;
+    padding: 10px;
 }
-h1{text-align:center;color:#90caf9;font-size:22px;}
-.controls{
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:center;
-    gap:6px;
-    margin-bottom:10px;
+h1, h2 { text-align: center; margin-bottom: 15px; font-size: 2em; }
+.flashcards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 8px;
+    justify-items: center;
 }
-button,select{
-    background:#1e1e1e;
-    color:#e0e0e0;
-    border:1px solid #333;
-    border-radius:6px;
-    padding:8px 12px;
-    font-size:14px;
+.flashcard {
+    width: 70px;
+    height: 70px;
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 11px;
+    cursor: pointer;
+    text-align: center;
+    word-break: break-word;
+    padding: 3px;
+}
+.jp { font-size: 20px; font-weight: bold; margin-bottom:5px; text-align:center; }
+.romaji { font-size: 12px; color: #cccccc; }
+.cn { font-size: 16px; color: #00ff99; }
+
+.choiceBtn {
+    margin: 5px;
+    padding: 12px 20px;
     cursor:pointer;
+    border-radius: 8px;
+    font-size: 18px;
+    width: 80%;
+    max-width: 300px;
 }
-.grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
-    gap:10px;
-}
-.card{
-    background:#1e1e1e;
-    border:1px solid #333;
-    border-radius:10px;
-    padding:12px;
-    text-align:center;
-}
-.kana{font-size:26px;font-weight:bold;}
-.roma{font-size:13px;color:#aaa;}
+.correct { background-color: green !important; color: #fff; }
+.wrong { background-color: red !important; color: #fff; }
 
-.modal{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.7);
-    display:none;
-    align-items:center;
-    justify-content:center;
-}
-.quizBox{
-    background:#1e1e1e;
-    border-radius:12px;
-    padding:18px;
-    width:90%;
-    max-width:360px;
-    text-align:center;
-}
-.question{font-size:24px;margin-bottom:8px;}
-.quizControls{
-    display:flex;
-    justify-content:flex-end;
-    margin-bottom:8px;
-}
-.choices{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-}
-.choice{
-    background:#121212;
-    border:1px solid #333;
-    border-radius:8px;
-    padding:12px;
-    font-size:20px;
-    transition: background 0.3s;
-}
+#examArea, #examResult, #practiceArea { display:none; }
+#practiceChoices, #examChoices { display:flex; flex-direction:column; align-items:center; }
+button { outline:none; border:none; }
 
-/* 錯題檢視 */
-.reviewOverlay{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.85);
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    z-index:9999;
+@media screen and (max-width: 430px){
+    .flashcard { width: 60px; height: 60px; font-size:10px; }
+    .jp { font-size: 26px; }
+    .cn { font-size: 16px; }
+    .choiceBtn { padding:10px 16px; font-size:16px; width:90%; }
 }
-.reviewBox{
-    background:#1e1e1e;
-    width:90%;
-    max-width:380px;
-    max-height:80vh;
-    overflow-y:auto;
-    border-radius:12px;
-    padding:16px;
-}
-.reviewItem{
-    border-bottom:1px solid #333;
-    padding:10px 0;
-}
-.reviewWrong{color:#ef5350;}
-.reviewCorrect{color:#81c784;}
 </style>
 </head>
-
 <body>
 
-<h1>🇯🇵 日文假名快速訓練</h1>
+<h1>日文單字練習（100 單字）</h1>
 
-<div class="controls">
-<select id="level" onchange="loadData()">
-  <option value="basic">五十音</option>
-  <option value="daku">濁音</option>
-  <option value="you">拗音</option>
-  <option value="all" selected>全部</option>
-</select>
-
-<button onclick="setOrder(false)">📖 正序</button>
-<button onclick="setOrder(true)">🔀 隨機</button>
-
-<button onclick="startQuiz('visual','practice')">👀 看字 (練習)</button>
-<button onclick="startQuiz('visual','exam')">👀 看字 (考試)</button>
-<button onclick="startQuiz('roma','practice')">🔤 羅馬拼音 (練習)</button>
-<button onclick="startQuiz('roma','exam')">🔤 羅馬拼音 (考試)</button>
+<div id="modeContainer" style="text-align:center; margin-bottom:15px;">
+    <button onclick="startPractice()">練習模式</button>
+    <button onclick="startExam()">考試模式</button>
 </div>
 
-<div class="grid" id="grid"></div>
+<div class="flashcards-container" id="flashcardsGrid"></div>
 
-<div class="modal" id="modal">
-<div class="quizBox">
-<div class="quizControls">
-<button onclick="stopQuiz()">⛔</button>
+<!-- 練習模式 -->
+<div id="practiceArea">
+    <h2>練習模式（4選1）</h2>
+    <div id="practiceCard"></div>
+    <div id="practiceChoices"></div>
+    <button onclick="exitMode()">中途退出</button>
 </div>
-<div class="question" id="question">？</div>
-<div class="choices" id="choices"></div>
+
+<!-- 考試模式 -->
+<div id="examArea">
+    <h2>考試模式（4選1）</h2>
+    <div id="examCard"></div>
+    <div id="examChoices"></div>
+    <div id="examProgress" style="margin-top:5px;"></div>
+    <button onclick="exitMode()">中途退出</button>
 </div>
+
+<!-- 考試結果 -->
+<div id="examResult">
+    <h2>考試結果</h2>
+    <p>錯誤題目：</p>
+    <ul id="examErrors"></ul>
+    <button onclick="backToHome()">返回主頁</button>
 </div>
 
 <script>
-let pool=[],answer,quizType,quizMode;
-let orderRandom=false,questionIndex=0,maxQuestions=20;
-let examScore=0,wrongList=[];
+const vocab = [
+{jp:"猫", romaji:"neko", cn:"貓"},{jp:"犬", romaji:"inu", cn:"狗"},
+{jp:"鳥", romaji:"tori", cn:"鳥"},{jp:"魚", romaji:"sakana", cn:"魚"},
+{jp:"馬", romaji:"uma", cn:"馬"},{jp:"牛", romaji:"ushi", cn:"牛"},
+{jp:"豚", romaji:"buta", cn:"豬"},{jp:"羊", romaji:"hitsuji", cn:"羊"},
+{jp:"山", romaji:"yama", cn:"山"},{jp:"川", romaji:"kawa", cn:"河川"},
+{jp:"海", romaji:"umi", cn:"海"},{jp:"空", romaji:"sora", cn:"天空"},
+{jp:"雨", romaji:"ame", cn:"雨"},{jp:"雪", romaji:"yuki", cn:"雪"},
+{jp:"風", romaji:"kaze", cn:"風"},{jp:"天気", romaji:"tenki", cn:"天氣"},
+{jp:"晴れ", romaji:"hare", cn:"晴天"},{jp:"曇り", romaji:"kumori", cn:"陰天"},
+{jp:"雷", romaji:"kaminari", cn:"雷"},{jp:"雲", romaji:"kumo", cn:"雲"},
+{jp:"朝", romaji:"asa", cn:"早上"},{jp:"昼", romaji:"hiru", cn:"中午"},
+{jp:"夜", romaji:"yoru", cn:"晚上"},{jp:"時間", romaji:"jikan", cn:"時間"},
+{jp:"分", romaji:"fun", cn:"分鐘"},{jp:"秒", romaji:"byou", cn:"秒"},
+{jp:"曜日", romaji:"youbi", cn:"星期"},{jp:"月曜日", romaji:"getsuyoubi", cn:"星期一"},
+{jp:"火曜日", romaji:"kayoubi", cn:"星期二"},{jp:"水曜日", romaji:"suiyoubi", cn:"星期三"},
+{jp:"木曜日", romaji:"mokuyoubi", cn:"星期四"},{jp:"金曜日", romaji:"kinyoubi", cn:"星期五"},
+{jp:"土曜日", romaji:"doyoubi", cn:"星期六"},{jp:"日曜日", romaji:"nichiyoubi", cn:"星期日"},
+{jp:"年", romaji:"toshi", cn:"年"},{jp:"月", romaji:"tsuki", cn:"月"},
+{jp:"日", romaji:"hi", cn:"日 / 太陽"},{jp:"昨日", romaji:"kinou", cn:"昨天"},
+{jp:"今日", romaji:"kyou", cn:"今天"},{jp:"明日", romaji:"ashita", cn:"明天"},
+{jp:"家", romaji:"ie", cn:"家"},{jp:"部屋", romaji:"heya", cn:"房間"},
+{jp:"台所", romaji:"daidokoro", cn:"廚房"},{jp:"風呂", romaji:"furo", cn:"浴室"},
+{jp:"トイレ", romaji:"toire", cn:"廁所"},{jp:"玄関", romaji:"genkan", cn:"玄關"},
+{jp:"庭", romaji:"niwa", cn:"庭院"},{jp:"窓", romaji:"mado", cn:"窗"},
+{jp:"ドア", romaji:"doa", cn:"門"},{jp:"机", romaji:"tsukue", cn:"書桌"},
+{jp:"椅子", romaji:"isu", cn:"椅子"},{jp:"本", romaji:"hon", cn:"書"},
+{jp:"紙", romaji:"kami", cn:"紙"},{jp:"鉛筆", romaji:"enpitsu", cn:"鉛筆"},
+{jp:"消しゴム", romaji:"keshigomu", cn:"橡皮擦"},{jp:"ノート", romaji:"nooto", cn:"筆記本"},
+{jp:"カバン", romaji:"kaban", cn:"包包"},{jp:"眼鏡", romaji:"megane", cn:"眼鏡"},
+{jp:"時計", romaji:"tokei", cn:"手錶"},{jp:"靴", romaji:"kutsu", cn:"鞋子"},
+{jp:"服", romaji:"fuku", cn:"衣服"},{jp:"帽子", romaji:"boushi", cn:"帽子"},
+{jp:"手袋", romaji:"tebukuro", cn:"手套"},{jp:"携帯", romaji:"keitai", cn:"手機"},
+{jp:"パソコン", romaji:"pasokon", cn:"電腦"},{jp:"テレビ", romaji:"terebi", cn:"電視"},
+{jp:"ラジオ", romaji:"rajio", cn:"收音機"},{jp:"電話", romaji:"denwa", cn:"電話"},
+{jp:"写真", romaji:"shashin", cn:"照片"},{jp:"絵", romaji:"e", cn:"畫"},
+{jp:"学校", romaji:"gakkou", cn:"學校"},{jp:"学生", romaji:"gakusei", cn:"學生"},
+{jp:"先生", romaji:"sensei", cn:"老師"},{jp:"授業", romaji:"jugyou", cn:"課程"},
+{jp:"教室", romaji:"kyoushitsu", cn:"教室"},{jp:"図書館", romaji:"toshokan", cn:"圖書館"},
+{jp:"試験", romaji:"shiken", cn:"考試"},{jp:"勉強", romaji:"benkyou", cn:"學習"},
+{jp:"宿題", romaji:"shukudai", cn:"作業"},{jp:"友達", romaji:"tomodachi", cn:"朋友"},
+{jp:"家族", romaji:"kazoku", cn:"家人"},{jp:"父", romaji:"chichi", cn:"父親"},
+{jp:"母", romaji:"haha", cn:"母親"},{jp:"兄", romaji:"ani", cn:"哥哥"},
+{jp:"姉", romaji:"ane", cn:"姊姊"},{jp:"弟", romaji:"otouto", cn:"弟弟"},
+{jp:"妹", romaji:"imouto", cn:"妹妹"},{jp:"祖父", romaji:"sofu", cn:"祖父"},
+{jp:"祖母", romaji:"sobo", cn:"祖母"},{jp:"料理", romaji:"ryouri", cn:"料理"},
+{jp:"食べ物", romaji:"tabemono", cn:"食物"},{jp:"飲み物", romaji:"nomimono", cn:"飲料"},
+{jp:"ご飯", romaji:"gohan", cn:"飯"},{jp:"パン", romaji:"pan", cn:"麵包"},
+{jp:"水", romaji:"mizu", cn:"水"},{jp:"お茶", romaji:"ocha", cn:"茶"},
+{jp:"コーヒー", romaji:"koohii", cn:"咖啡"},{jp:"牛乳", romaji:"gyuunyuu", cn:"牛奶"},
+{jp:"果物", romaji:"kudamono", cn:"水果"},{jp:"野菜", romaji:"yasai", cn:"蔬菜"}
+];
 
-const data={
-basic:[["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"],["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"],["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"],["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"],["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"],["や","ya"],["ゆ","yu"],["よ","yo"],["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],["わ","wa"],["を","wo"],["ん","n"]],
-daku:[["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"],["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"],["だ","da"],["で","de"],["ど","do"],["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"],["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"]],
-you:[["きゃ","kya"],["きゅ","kyu"],["きょ","kyo"],["しゃ","sha"],["しゅ","shu"],["しょ","sho"],["ちゃ","cha"],["ちゅ","chu"],["ちょ","cho"],["にゃ","nya"],["ひゃ","hya"],["みゃ","mya"],["りゃ","rya"]]
-};
+function shuffle(array){return array.sort(()=>Math.random()-0.5);}
 
-function loadData(){
-    const lv=level.value;
-    pool = lv==="all" ? [...data.basic,...data.daku,...data.you] : [...data[lv]];
-    if(orderRandom) pool.sort(()=>Math.random()-0.5);
-    grid.innerHTML="";
-    pool.forEach(k=>{
-        const c=document.createElement("div");
-        c.className="card";
-        c.innerHTML=`<div class="kana">${k[0]}</div><div class="roma">${k[1]}</div>`;
-        grid.appendChild(c); // 移除點擊發音
+// ---------- Flashcards ----------
+const flashcardsGrid = document.getElementById('flashcardsGrid');
+function renderGrid(){
+    flashcardsGrid.innerHTML='';
+    vocab.forEach(item=>{
+        const card = document.createElement('div');
+        card.className='flashcard';
+        card.innerHTML=`<div class="jp">${item.jp}</div><div class="romaji">${item.romaji}</div><div class="cn">${item.cn}</div>`;
+        flashcardsGrid.appendChild(card);
     });
 }
+renderGrid();
 
-function setOrder(r){orderRandom=r;loadData();}
-
-function startQuiz(t,m){
-    quizType=t;quizMode=m;
-    questionIndex=examScore=0;
-    wrongList=[];
-    modal.style.display="flex";
-    grid.style.display="none";
-    nextQuestion();
+// ---------- 練習模式 ----------
+let practiceQuestions = [], practiceCurrent=0;
+function startPractice(){
+    document.getElementById('modeContainer').style.display='none';
+    document.getElementById('flashcardsGrid').style.display='none';
+    document.getElementById('practiceArea').style.display='block';
+    practiceQuestions = shuffle([...vocab]);
+    practiceCurrent=0;
+    showPracticeCard();
 }
 
-function stopQuiz(){
-    modal.style.display="none";
-    grid.style.display="grid";
-    if(quizMode==="exam"){
-        if(wrongList.length) showReview();
-        alert(`考試結束：${examScore}/${maxQuestions}`);
+function showPracticeCard(){
+    const q = practiceQuestions[practiceCurrent];
+    document.getElementById('practiceCard').innerHTML=`<div class="jp">${q.jp}</div>`;
+    const choices=[q];
+    while(choices.length<4){
+        const r=vocab[Math.floor(Math.random()*vocab.length)];
+        if(!choices.includes(r)) choices.push(r);
     }
-}
-
-function nextQuestion(){
-    if(quizMode==="exam" && questionIndex>=maxQuestions){stopQuiz();return;}
-    answer=pool[Math.floor(Math.random()*pool.length)];
-    questionIndex++;
-
-    question.innerText = quizType==="roma"?answer[0]:answer[1];
-    const box=choices;
-    box.innerHTML="";
-
-    const opts=[answer];
-    while(opts.length<4){
-        const r=pool[Math.floor(Math.random()*pool.length)];
-        if(!opts.includes(r)) opts.push(r);
-    }
-    opts.sort(()=>Math.random()-0.5);
-
-    opts.forEach(o=>{
-        const b=document.createElement("div");
-        b.className="choice";
-        b.innerText = quizType==="roma"?o[1]:o[0];
-        b.onclick=()=>{
-            if(quizMode==="practice"){
-                // 練習模式顯示正確/錯誤顏色
-                if(o===answer){
-                    b.style.backgroundColor="#81c784"; // 綠色
-                } else {
-                    b.style.backgroundColor="#ef5350"; // 紅色
-                    // 顯示正確答案
-                    Array.from(box.children).forEach(c=>{
-                        if(c.innerText=== (quizType==="roma"?answer[1]:answer[0])){
-                            c.style.backgroundColor="#81c784";
-                        }
-                    });
-                }
-                setTimeout(nextQuestion,800);
-            } else if(quizMode==="exam"){
-                if(o!==answer) wrongList.push({
-                    kana: answer[0],
-                    roma: answer[1],
-                    chosen: quizType==="roma"?o[1]:o[0],
-                    mode: quizType
-                });
-                if(o===answer) examScore++;
-                nextQuestion();
-            }
+    shuffle(choices);
+    const div = document.getElementById('practiceChoices');
+    div.innerHTML='';
+    choices.forEach(c=>{
+        const btn=document.createElement('button');
+        btn.className='choiceBtn';
+        btn.innerHTML=`${c.cn}`;
+        btn.disabled=false;
+        btn.onclick=()=>{
+            // 顯示紅色或綠色
+            if(c===q) btn.classList.add('correct');
+            else btn.classList.add('wrong');
+            // 同時標示正確答案
+            div.querySelectorAll('button').forEach(b=>{
+                if(b.innerText===q.cn) b.classList.add('correct');
+                b.disabled=true;
+            });
+            setTimeout(()=>{
+                practiceCurrent++;
+                if(practiceCurrent<practiceQuestions.length) showPracticeCard();
+                else alert("練習完成！");
+            },1000);
         };
-        box.appendChild(b);
+        div.appendChild(btn);
     });
 }
 
-function showReview(){
-    const overlay=document.createElement("div");
-    overlay.className="reviewOverlay";
-    const box=document.createElement("div");
-    box.className="reviewBox";
-    box.innerHTML="<h3>❌ 錯誤題目</h3>";
-
-    wrongList.forEach((w,i)=>{
-        // 顯示模式對應
-        const questionDisplay = w.mode==="roma"?w.kana:w.roma;
-        const answerDisplay = w.mode==="roma"?w.roma:w.kana;
-        const chosenDisplay = w.chosen;
-        box.innerHTML+=`
-        <div class="reviewItem">
-            ${i+1}. ${questionDisplay}<br>
-            <span class="reviewWrong">你選：${chosenDisplay}</span><br>
-            <span class="reviewCorrect">正確：${answerDisplay}</span>
-        </div>`;
-    });
-
-    const btn=document.createElement("button");
-    btn.innerText="關閉";
-    btn.onclick=()=>overlay.remove();
-    box.appendChild(btn);
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
+// ---------- 考試模式 ----------
+let examQuestions = [], examCurrent = 0, examAnswers = [];
+function startExam(){
+    document.getElementById('modeContainer').style.display='none';
+    document.getElementById('flashcardsGrid').style.display='none';
+    document.getElementById('examArea').style.display='block';
+    examQuestions = shuffle([...vocab]).slice(0,30);
+    examCurrent=0;
+    examAnswers=[];
+    showExamCard();
 }
 
-loadData();
+function showExamCard(){
+    const q = examQuestions[examCurrent];
+    document.getElementById('examCard').innerHTML=`<div class="jp">${q.jp}</div>`;
+    const choices=[q];
+    while(choices.length<4){
+        const r=vocab[Math.floor(Math.random()*vocab.length)];
+        if(!choices.includes(r)) choices.push(r);
+    }
+    shuffle(choices);
+    const div = document.getElementById('examChoices');
+    div.innerHTML='';
+    choices.forEach(c=>{
+        const btn=document.createElement('button');
+        btn.className='choiceBtn';
+        btn.innerHTML=`${c.cn}`;
+        btn.onclick=()=>submitExamAnswer(c.cn);
+        div.appendChild(btn);
+    });
+    document.getElementById('examProgress').innerText=`題目 ${examCurrent+1} / 30`;
+}
+
+function submitExamAnswer(selected){
+    const correct = examQuestions[examCurrent].cn;
+    examAnswers.push({question:examQuestions[examCurrent], user:selected, correct});
+    examCurrent++;
+    if(examCurrent<examQuestions.length) showExamCard();
+    else showExamResult();
+}
+
+function showExamResult(){
+    document.getElementById('examArea').style.display='none';
+    const list=document.getElementById('examErrors');
+    list.innerHTML='';
+    examAnswers.forEach(a=>{
+        if(a.user!==a.correct){
+            const li=document.createElement('li');
+            li.innerHTML=`${a.question.jp} - 你的答案: ${a.user}，正確答案: ${a.correct}`;
+            list.appendChild(li);
+        }
+    });
+    document.getElementById('examResult').style.display='block';
+}
+
+function exitMode(){backToHome();}
+function backToHome(){
+    document.getElementById('practiceArea').style.display='none';
+    document.getElementById('examArea').style.display='none';
+    document.getElementById('examResult').style.display='none';
+    document.getElementById('flashcardsGrid').style.display='grid';
+    document.getElementById('modeContainer').style.display='block';
+}
 </script>
-
 </body>
 </html>
