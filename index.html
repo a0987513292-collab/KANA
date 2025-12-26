@@ -78,7 +78,6 @@ button,select{
     padding:12px;
     font-size:20px;
 }
-/* 錯題檢視 */
 .reviewOverlay{
     position:fixed;
     inset:0;
@@ -184,7 +183,6 @@ function startQuiz(t,m){
     modal.style.display = "flex";
     grid.style.display = "none";
 
-    // 聽力模式才顯示播放按鈕
     soundBtn.style.display = (quizType==="listen") ? "inline-block" : "none";
 
     nextQuestion();
@@ -204,7 +202,6 @@ function nextQuestion(){
     answer = pool[Math.floor(Math.random()*pool.length)];
     questionIndex++;
 
-    // 顯示題目
     question.innerText = (quizType==="listen") ? "🔊 聽音選擇" :
                          (quizType==="roma") ? answer[0] : answer[1];
 
@@ -238,7 +235,6 @@ function nextQuestion(){
     });
 }
 
-// 顯示錯題
 function showReview(){
     const overlay=document.createElement("div");
     overlay.className="reviewOverlay";
@@ -265,7 +261,6 @@ function showReview(){
     document.body.appendChild(overlay);
 }
 
-// 語音播放
 function speak(t){
     if(u) speechSynthesis.cancel();
     u=new SpeechSynthesisUtterance(t);
@@ -275,7 +270,6 @@ function speak(t){
 
 function playSound(){speak(answer[0]);}
 
-// 阻擋手勢縮放
 document.addEventListener("gesturestart",e=>e.preventDefault());
 document.addEventListener("dblclick",e=>e.preventDefault());
 
