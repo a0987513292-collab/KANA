@@ -63,7 +63,7 @@ button,select{
 .question{font-size:24px;margin-bottom:8px;}
 .quizControls{
     display:flex;
-    justify-content:space-between;
+    justify-content:flex-end;
     margin-bottom:8px;
 }
 .choices{
@@ -78,30 +78,6 @@ button,select{
     padding:12px;
     font-size:20px;
 }
-.reviewOverlay{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.85);
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    z-index:9999;
-}
-.reviewBox{
-    background:#1e1e1e;
-    width:90%;
-    max-width:380px;
-    max-height:80vh;
-    overflow-y:auto;
-    border-radius:12px;
-    padding:16px;
-}
-.reviewItem{
-    border-bottom:1px solid #333;
-    padding:10px 0;
-}
-.reviewWrong{color:#ef5350;}
-.reviewCorrect{color:#81c784;}
 </style>
 </head>
 
@@ -122,8 +98,6 @@ button,select{
 
 <button onclick="startQuiz('visual','practice')">👀 看字 (練習)</button>
 <button onclick="startQuiz('visual','exam')">👀 看字 (考試)</button>
-<button onclick="startQuiz('listen','practice')">🎧 聽力 (練習)</button>
-<button onclick="startQuiz('listen','exam')">🎧 聽力 (考試)</button>
 <button onclick="startQuiz('roma','practice')">🔤 羅馬拼音 (練習)</button>
 <button onclick="startQuiz('roma','exam')">🔤 羅馬拼音 (考試)</button>
 </div>
@@ -133,7 +107,6 @@ button,select{
 <div class="modal" id="modal">
 <div class="quizBox">
 <div class="quizControls">
-<button id="soundBtn" onclick="playSound()">🔊 播放</button>
 <button onclick="stopQuiz()">⛔</button>
 </div>
 <div class="question" id="question">？</div>
@@ -142,26 +115,9 @@ button,select{
 </div>
 
 <script>
-/* ====== 新增：手機語音解鎖 ====== */
-let voicesReady = false;
-function unlockSpeech(){
-    const u = new SpeechSynthesisUtterance(" ");
-    speechSynthesis.speak(u);
-    speechSynthesis.cancel();
-    document.removeEventListener("touchstart", unlockSpeech);
-    document.removeEventListener("click", unlockSpeech);
-}
-document.addEventListener("touchstart", unlockSpeech, { once:true });
-document.addEventListener("click", unlockSpeech, { once:true });
-
-speechSynthesis.onvoiceschanged = () => {
-    voicesReady = true;
-};
-/* ============================== */
-
 let pool=[],answer,quizType,quizMode;
 let orderRandom=false,questionIndex=0,maxQuestions=20;
-let examScore=0,wrongList=[],u;
+let examScore=0;
 
 const data={
 basic:[["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"],["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"],["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"],["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"],["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"],["や","ya"],["ゆ","yu"],["よ","yo"],["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],["わ","wa"],["を","wo"],["ん","n"]],
@@ -174,20 +130,6 @@ const grid=document.getElementById("grid");
 const modal=document.getElementById("modal");
 const question=document.getElementById("question");
 const choices=document.getElementById("choices");
-const soundBtn=document.getElementById("soundBtn");
-
-function speak(t){
-    if(!voicesReady){
-        setTimeout(()=>speak(t),100);
-        return;
-    }
-    const ut = new SpeechSynthesisUtterance(t);
-    ut.lang = "ja-JP";
-    speechSynthesis.cancel();
-    speechSynthesis.speak(ut);
-}
-
-function playSound(){ speak(answer[0]); }
 
 function loadData(){
     const lv=level.value;
@@ -198,28 +140,53 @@ function loadData(){
         const c=document.createElement("div");
         c.className="card";
         c.innerHTML=`<div class="kana">${k[0]}</div><div class="roma">${k[1]}</div>`;
-        c.onclick=()=>speak(k[0]);
         grid.appendChild(c);
     });
 }
 
 function setOrder(r){orderRandom=r;loadData();}
 
-/* 其餘邏輯完全未動 */
-function startQuiz(t,m){quizType=t;quizMode=m;questionIndex=examScore=0;wrongList=[];modal.style.display="flex";grid.style.display="none";soundBtn.style.display=(quizType==="listen")?"inline-block":"none";nextQuestion();}
-function stopQuiz(){modal.style.display="none";grid.style.display="grid";}
+function startQuiz(t,m){
+    quizType=t;
+    quizMode=m;
+    questionIndex=examScore=0;
+    modal.style.display="flex";
+    grid.style.display="none";
+    nextQuestion();
+}
+
+function stopQuiz(){
+    modal.style.display="none";
+    grid.style.display="grid";
+}
+
 function nextQuestion(){
+    if(quizMode==="exam" && questionIndex>=maxQuestions){
+        alert(`考試結束：${examScore}/${maxQuestions}`);
+        stopQuiz();
+        return;
+    }
     answer=pool[Math.floor(Math.random()*pool.length)];
-    question.innerText=(quizType==="listen")?"🔊 聽音選擇":(quizType==="roma")?answer[0]:answer[1];
+    questionIndex++;
+
+    question.innerText = quizType==="roma" ? answer[0] : answer[1];
     choices.innerHTML="";
+
     const opts=[answer];
-    while(opts.length<4){const r=pool[Math.floor(Math.random()*pool.length)];if(!opts.includes(r))opts.push(r);}
+    while(opts.length<4){
+        const r=pool[Math.floor(Math.random()*pool.length)];
+        if(!opts.includes(r)) opts.push(r);
+    }
     opts.sort(()=>Math.random()-0.5);
+
     opts.forEach(o=>{
         const b=document.createElement("div");
         b.className="choice";
-        b.innerText=(quizType==="roma")?o[1]:o[0];
-        b.onclick=()=>{nextQuestion();};
+        b.innerText = quizType==="roma" ? o[1] : o[0];
+        b.onclick=()=>{
+            if(o===answer) examScore++;
+            nextQuestion();
+        };
         choices.appendChild(b);
     });
 }
