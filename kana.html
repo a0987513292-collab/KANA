@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>日文假名快速訓練</title>
+<style>
+body{
+    background:#121212;
+    color:#e0e0e0;
+    font-family:sans-serif;
+    margin:0;
+    padding:14px;
+    touch-action: manipulation;
+}
+h1{text-align:center;color:#90caf9;font-size:22px;}
+.controls{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:6px;
+    margin-bottom:10px;
+}
+button,select{
+    background:#1e1e1e;
+    color:#e0e0e0;
+    border:1px solid #333;
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:14px;
+    cursor:pointer;
+}
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+    gap:10px;
+}
+.card{
+    background:#1e1e1e;
+    border:1px solid #333;
+    border-radius:10px;
+    padding:12px;
+    text-align:center;
+}
+.kana{font-size:26px;font-weight:bold;}
+.roma{font-size:13px;color:#aaa;}
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.7);
+    display:none;
+    align-items:center;
+    justify-content:center;
+}
+.quizBox{
+    background:#1e1e1e;
+    border-radius:12px;
+    padding:18px;
+    width:90%;
+    max-width:360px;
+    text-align:center;
+}
+.question{font-size:24px;margin-bottom:8px;}
+.quizControls{
+    display:flex;
+    justify-content:flex-end;
+    margin-bottom:8px;
+}
+.choices{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+.choice{
+    background:#121212;
+    border:1px solid #333;
+    border-radius:8px;
+    padding:12px;
+    font-size:20px;
+    transition: background 0.3s;
+}
+
+/* 錯題檢視 */
+.reviewOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.85);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+}
+.reviewBox{
+    background:#1e1e1e;
+    width:90%;
+    max-width:380px;
+    max-height:80vh;
+    overflow-y:auto;
+    border-radius:12px;
+    padding:16px;
+}
+.reviewItem{
+    border-bottom:1px solid #333;
+    padding:10px 0;
+}
+.reviewWrong{color:#ef5350;}
+.reviewCorrect{color:#81c784;}
+</style>
+</head>
+
+<body>
+
+<h1>🇯🇵 日文假名快速訓練</h1>
+
+<div class="controls">
+<select id="level" onchange="loadData()">
+  <option value="basic">五十音</option>
+  <option value="daku">濁音</option>
+  <option value="you">拗音</option>
+  <option value="all" selected>全部</option>
+</select>
+
+<button onclick="setOrder(false)">📖 正序</button>
+<button onclick="setOrder(true)">🔀 隨機</button>
+
+<button onclick="startQuiz('visual','practice')">👀 看字 (練習)</button>
+<button onclick="startQuiz('visual','exam')">👀 看字 (考試)</button>
+<button onclick="startQuiz('roma','practice')">🔤 羅馬拼音 (練習)</button>
+<button onclick="startQuiz('roma','exam')">🔤 羅馬拼音 (考試)</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="modal" id="modal">
+<div class="quizBox">
+<div class="quizControls">
+<button onclick="stopQuiz()">⛔</button>
+</div>
+<div class="question" id="question">？</div>
+<div class="choices" id="choices"></div>
+</div>
+</div>
+
+<script>
+let pool=[],answer,quizType,quizMode;
+let orderRandom=false,questionIndex=0,maxQuestions=20;
+let examScore=0,wrongList=[];
+
+const data={
+basic:[["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"],["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"],["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"],["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"],["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"],["や","ya"],["ゆ","yu"],["よ","yo"],["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],["わ","wa"],["を","wo"],["ん","n"]],
+daku:[["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"],["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"],["だ","da"],["で","de"],["ど","do"],["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"],["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"]],
+you:[["きゃ","kya"],["きゅ","kyu"],["きょ","kyo"],["しゃ","sha"],["しゅ","shu"],["しょ","sho"],["ちゃ","cha"],["ちゅ","chu"],["ちょ","cho"],["にゃ","nya"],["ひゃ","hya"],["みゃ","mya"],["りゃ","rya"]]
+};
+
+function loadData(){
+    const lv=level.value;
+    pool = lv==="all" ? [...data.basic,...data.daku,...data.you] : [...data[lv]];
+    if(orderRandom) pool.sort(()=>Math.random()-0.5);
+    grid.innerHTML="";
+    pool.forEach(k=>{
+        const c=document.createElement("div");
+        c.className="card";
+        c.innerHTML=`<div class="kana">${k[0]}</div><div class="roma">${k[1]}</div>`;
+        grid.appendChild(c); // 移除點擊發音
+    });
+}
+
+function setOrder(r){orderRandom=r;loadData();}
+
+function startQuiz(t,m){
+    quizType=t;quizMode=m;
+    questionIndex=examScore=0;
+    wrongList=[];
+    modal.style.display="flex";
+    grid.style.display="none";
+    nextQuestion();
+}
+
+function stopQuiz(){
+    modal.style.display="none";
+    grid.style.display="grid";
+    if(quizMode==="exam"){
+        if(wrongList.length) showReview();
+        alert(`考試結束：${examScore}/${maxQuestions}`);
+    }
+}
+
+function nextQuestion(){
+    if(quizMode==="exam" && questionIndex>=maxQuestions){stopQuiz();return;}
+    answer=pool[Math.floor(Math.random()*pool.length)];
+    questionIndex++;
+
+    question.innerText = quizType==="roma"?answer[0]:answer[1];
+    const box=choices;
+    box.innerHTML="";
+
+    const opts=[answer];
+    while(opts.length<4){
+        const r=pool[Math.floor(Math.random()*pool.length)];
+        if(!opts.includes(r)) opts.push(r);
+    }
+    opts.sort(()=>Math.random()-0.5);
+
+    opts.forEach(o=>{
+        const b=document.createElement("div");
+        b.className="choice";
+        b.innerText = quizType==="roma"?o[1]:o[0];
+        b.onclick=()=>{
+            if(quizMode==="practice"){
+                // 練習模式顯示正確/錯誤顏色
+                if(o===answer){
+                    b.style.backgroundColor="#81c784"; // 綠色
+                } else {
+                    b.style.backgroundColor="#ef5350"; // 紅色
+                    // 顯示正確答案
+                    Array.from(box.children).forEach(c=>{
+                        if(c.innerText=== (quizType==="roma"?answer[1]:answer[0])){
+                            c.style.backgroundColor="#81c784";
+                        }
+                    });
+                }
+                setTimeout(nextQuestion,800);
+            } else if(quizMode==="exam"){
+                if(o!==answer) wrongList.push({
+                    kana: answer[0],
+                    roma: answer[1],
+                    chosen: quizType==="roma"?o[1]:o[0],
+                    mode: quizType
+                });
+                if(o===answer) examScore++;
+                nextQuestion();
+            }
+        };
+        box.appendChild(b);
+    });
+}
+
+function showReview(){
+    const overlay=document.createElement("div");
+    overlay.className="reviewOverlay";
+    const box=document.createElement("div");
+    box.className="reviewBox";
+    box.innerHTML="<h3>❌ 錯誤題目</h3>";
+
+    wrongList.forEach((w,i)=>{
+        // 顯示模式對應
+        const questionDisplay = w.mode==="roma"?w.kana:w.roma;
+        const answerDisplay = w.mode==="roma"?w.roma:w.kana;
+        const chosenDisplay = w.chosen;
+        box.innerHTML+=`
+        <div class="reviewItem">
+            ${i+1}. ${questionDisplay}<br>
+            <span class="reviewWrong">你選：${chosenDisplay}</span><br>
+            <span class="reviewCorrect">正確：${answerDisplay}</span>
+        </div>`;
+    });
+
+    const btn=document.createElement("button");
+    btn.innerText="關閉";
+    btn.onclick=()=>overlay.remove();
+    box.appendChild(btn);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+}
+
+loadData();
+</script>
+
+</body>
+</html>
