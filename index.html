@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>日文假名快速訓練</title>
+<title>日文練習</title>
 <style>
 body{
     background:#121212;
@@ -111,21 +111,19 @@ button,select{
 
 <body>
 
-<h1>🇯🇵 日文假名快速訓練</h1>
+<h1>🇯🇵 日文練習</h1>
 
 <div class="controls">
 <select id="level" onchange="loadData()">
   <option value="basic">五十音</option>
   <option value="daku">濁音</option>
   <option value="you">拗音</option>
-  <option value="all" selected>全部</option>
+  <option value="kanaAll">全部假名</option>
+  <option value="all" selected>單字</option>
 </select>
 
-<button onclick="setOrder(false)">📖 正序</button>
-<button onclick="setOrder(true)">🔀 隨機</button>
-
-<button onclick="startQuiz('visual','practice')">👀 看字 (練習)</button>
-<button onclick="startQuiz('visual','exam')">👀 看字 (考試)</button>
+<button onclick="startQuiz('visual','practice')">👀 單字 (練習)</button>
+<button onclick="startQuiz('visual','exam')">👀 單字 (考試)</button>
 <button onclick="startQuiz('roma','practice')">🔤 羅馬拼音 (練習)</button>
 <button onclick="startQuiz('roma','exam')">🔤 羅馬拼音 (考試)</button>
 </div>
@@ -143,92 +141,113 @@ button,select{
 </div>
 
 <script>
-let pool=[],answer,quizType,quizMode;
-let orderRandom=false,questionIndex=0,maxQuestions=20;
-let examScore=0,wrongList=[];
+let pool=[], answer, quizType, quizMode;
+let orderRandom=false, questionIndex=0, maxQuestions=30;
+let examScore=0, wrongList=[];
+let quizPool=[];
 
 const data={
-basic:[["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"],["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"],["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"],["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"],["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"],["や","ya"],["ゆ","yu"],["よ","yo"],["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],["わ","wa"],["を","wo"],["ん","n"]],
-daku:[["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"],["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"],["だ","da"],["で","de"],["ど","do"],["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"],["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"]],
-you:[["きゃ","kya"],["きゅ","kyu"],["きょ","kyo"],["しゃ","sha"],["しゅ","shu"],["しょ","sho"],["ちゃ","cha"],["ちゅ","chu"],["ちょ","cho"],["にゃ","nya"],["ひゃ","hya"],["みゃ","mya"],["りゃ","rya"]]
+  basic:[["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"],["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"],["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"],["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"],["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"],["や","ya"],["ゆ","yu"],["よ","yo"],["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],["わ","wa"],["を","wo"],["ん","n"]],
+  daku:[["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"],["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"],["だ","da"],["で","de"],["ど","do"],["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"],["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"]],
+  you:[["きゃ","kya"],["きゅ","kyu"],["きょ","kyo"],["しゃ","sha"],["しゅ","shu"],["しょ","sho"],["ちゃ","cha"],["ちゅ","chu"],["ちょ","cho"],["にゃ","nya"],["ひゃ","hya"],["みゃ","mya"],["りゃ","rya"]],
+  words:[
+    ["ありがとう", "arigatou", "謝謝"],["こんにちは", "konnichiwa", "你好"],["おはよう", "ohayou", "早安"],["こんばんは", "konbanwa", "晚上好"],["かわいい", "kawaii", "可愛"],["すごい", "sugoi", "厲害"],["つよい", "tsuyoi", "強大"],["すき", "suki", "喜歡"],["あい", "ai", "愛"],["だいすき", "daisuki", "最喜歡"],["おつかれさま", "otsukaresama", "辛苦了"],["あそぶ", "asobu", "玩嗎"],["いっしょにあそぶ", "issho ni asobu", "一起玩嗎"],["ともだち", "tomodachi", "朋友"],["がくせい", "gakusei", "學生"],["せんせい", "sensei", "老師"],["べんきょう", "benkyou", "學習"],["しゅくだい", "shukudai", "作業"],["がっこう", "gakkou", "學校"],["じかん", "jikan", "時間"],["いそがしい", "isogashii", "忙碌"],["たのしい", "tanoshii", "快樂"],["むずかしい", "muzukashii", "困難"],["かんたん", "kantan", "簡單"],["しんせつ", "shinsetsu", "親切"],["だいじ", "daiji", "重要"],["ゆめ", "yume", "夢想"],["きぼう", "kibou", "希望"],["せいちょう", "seichou", "成長"],["しっぱい", "shippai", "失敗"],["せいこう", "seikou", "成功"],["ちから", "chikara", "力量"],["こころ", "kokoro", "心"],["ぴん", "pin", "標記"],["ここ", "koko", "這裡"],["てき", "teki", "敵人"],["すうにん", "suu-nin", "好幾個人"],["ひとり", "hitori", "一個人"],["のこり", "nokori", "剩下"],["あしおと", "ashioto", "腳步聲"],["まかせて", "makasete", "交給我"],["ごめん", "gomen", "抱歉"],["あーまー", "aamaa", "護甲"],["あーまーわれ", "aamaa ware", "護甲破了"],["ばってりー", "batterii", "大電池"],["せる", "seru", "小電池"],["きっと", "kitto", "醫療包"],["にく", "niku", "剩血（無甲）"],["だうん", "daun", "倒地"],["おこす", "okosu", "扶起隊友"],["おこして", "okoshite", "救我"],["ふぁいと", "faito", "開打"],["ひくよ", "hikuyo", "要撤了"],["よせる", "yoseru", "靠過來集合"],["かくれる", "kakureru", "先躲"],["まく", "maku", "丟投擲物"],["ぐれ", "gure", "手榴彈"],["うると", "uruto", "大招"],["うるとたまった", "uruto tamatta", "大招好了"],["すきゃん", "sukyan", "掃描"],["はさむ", "hasamu", "夾擊"],["あんち", "anchi", "安全區"],["どこ", "doko", "哪裡"],["どこにいる", "doko ni iru", "在哪裡"],["どこピン", "doko pin", "你標哪"],["どこ見てる", "doko miteru", "在看哪個方向"],["てき どこ", "eki doko", "敵人在哪"],["ひだり", "hidari", "左"],["みぎ", "migi", "右"],["てき ひだり", "teki hidari", "敵人左"],["てき みぎ", "teki migi", "敵人右"],["うえ", "ue", "上面"],["した", "shita", "下面"],["たかい", "takai", "高處"],["ひくい", "hikui", "低處"],["うえいる", "ue iru", "上面有人"],["したいる", "shita iru", "下面有人"],["こうしょ", "kousho", "高點"],["ていしょ", "teisho", "低點"],["ひだり うえ", "hidari ue", "左上"],["みぎ した", "migi shita", "右下"],["こうしょにてき", "kousho ni teki", "高點有敵人"],["した ふたり", "shita futari", "下面兩人"],["みぎのこうしょ", "migi no kousho", "右邊高點"],["じゅう", "juu", "槍"],["しろあーまー", "shiro aamaa", "白甲"],["あおあーまー", "ao aamaa", "藍甲"],["むらさきあーまー", "murasaki aamaa", "紫甲"],["きんあーまー", "kin aamaa", "金甲"],["あかあーまー", "aka aamaa", "紅甲"]
+  ]
 };
 
 function loadData(){
-    const lv=level.value;
-    pool = lv==="all" ? [...data.basic,...data.daku,...data.you] : [...data[lv]];
-    if(orderRandom) pool.sort(()=>Math.random()-0.5);
-    grid.innerHTML="";
-    pool.forEach(k=>{
-        const c=document.createElement("div");
-        c.className="card";
-        c.innerHTML=`<div class="kana">${k[0]}</div><div class="roma">${k[1]}</div>`;
-        grid.appendChild(c); // 移除點擊發音
+    const lv = level.value;
+    if(lv === "all"){
+        pool = [...data.words];
+    } else if(lv === "kanaAll") {
+        pool = [...data.basic, ...data.daku, ...data.you]; // 合併三種假名
+    } else {
+        pool = [...data[lv]];
+    }
+
+    if(orderRandom) pool.sort(() => Math.random() - 0.5);
+
+    grid.innerHTML = "";
+    pool.forEach(k => {
+        const c = document.createElement("div");
+        c.className = "card";
+        if(lv === "all"){
+            c.innerHTML = `<p><strong>${k[0]}</strong><br>(${k[1]})<br>${k[2]||""}</p>`;
+        } else {
+            c.innerHTML = `<p><strong>${k[0]}</strong><br>${k[1]}</p>`;
+        }
+        grid.appendChild(c);
     });
 }
 
-function setOrder(r){orderRandom=r;loadData();}
-
-function startQuiz(t,m){
-    quizType=t;quizMode=m;
-    questionIndex=examScore=0;
-    wrongList=[];
-    modal.style.display="flex";
-    grid.style.display="none";
+function startQuiz(t, m) {
+    quizType = t;
+    quizMode = m;
+    questionIndex = 0;
+    examScore = 0;
+    wrongList = [];
+    quizPool = [...pool].sort(() => Math.random() - 0.5).slice(0, maxQuestions);
+    modal.style.display = "flex";
+    grid.style.display = "none";
     nextQuestion();
 }
 
-function stopQuiz(){
-    modal.style.display="none";
-    grid.style.display="grid";
-    if(quizMode==="exam"){
-        if(wrongList.length) showReview();
+function stopQuiz() {
+    modal.style.display = "none";
+    grid.style.display = "grid";
+    if (quizMode === "exam") {
+        if (wrongList.length) showReview();
         alert(`考試結束：${examScore}/${maxQuestions}`);
     }
 }
 
-function nextQuestion(){
-    if(quizMode==="exam" && questionIndex>=maxQuestions){stopQuiz();return;}
-    answer=pool[Math.floor(Math.random()*pool.length)];
+function nextQuestion() {
+    if (questionIndex >= quizPool.length) { stopQuiz(); return; }
+    answer = quizPool[questionIndex];
     questionIndex++;
 
-    question.innerText = quizType==="roma"?answer[0]:answer[1];
-    const box=choices;
-    box.innerHTML="";
+    question.innerHTML =
+        quizType === "roma"
+        ? `${answer[0]}<br><span style="font-size:14px;color:#aaa;">（${answer[2]||""}）</span>`
+        : `${answer[1]}<br><span style="font-size:14px;color:#aaa;">（${answer[2]||""}）</span>`;
 
-    const opts=[answer];
-    while(opts.length<4){
-        const r=pool[Math.floor(Math.random()*pool.length)];
-        if(!opts.includes(r)) opts.push(r);
+    const box = choices;
+    box.innerHTML = "";
+
+    const opts = [answer];
+    while (opts.length < 4) {
+        const r = pool[Math.floor(Math.random() * pool.length)];
+        if (!opts.includes(r)) opts.push(r);
     }
-    opts.sort(()=>Math.random()-0.5);
+    opts.sort(() => Math.random() - 0.5);
 
-    opts.forEach(o=>{
-        const b=document.createElement("div");
-        b.className="choice";
-        b.innerText = quizType==="roma"?o[1]:o[0];
-        b.onclick=()=>{
-            if(quizMode==="practice"){
-                // 練習模式顯示正確/錯誤顏色
-                if(o===answer){
-                    b.style.backgroundColor="#81c784"; // 綠色
+    opts.forEach(o => {
+        const b = document.createElement("div");
+        b.className = "choice";
+        b.innerText = quizType === "roma" ? o[1] : o[0];
+        b.onclick = () => {
+            if (quizMode === "practice") {
+                if (o === answer) {
+                    b.style.backgroundColor = "#81c784"; 
                 } else {
-                    b.style.backgroundColor="#ef5350"; // 紅色
-                    // 顯示正確答案
-                    Array.from(box.children).forEach(c=>{
-                        if(c.innerText=== (quizType==="roma"?answer[1]:answer[0])){
-                            c.style.backgroundColor="#81c784";
+                    b.style.backgroundColor = "#ef5350";
+                    Array.from(box.children).forEach(c => {
+                        if (c.innerText === (quizType === "roma" ? answer[1] : answer[0])) {
+                            c.style.backgroundColor = "#81c784";
                         }
                     });
                 }
-                setTimeout(nextQuestion,800);
-            } else if(quizMode==="exam"){
-                if(o!==answer) wrongList.push({
+                setTimeout(nextQuestion, 800);
+            } else if (quizMode === "exam") {
+                if (o !== answer) wrongList.push({
                     kana: answer[0],
                     roma: answer[1],
-                    chosen: quizType==="roma"?o[1]:o[0],
+                    mean: answer[2]||"",  
+                    chosenText: quizType === "roma" ? o[1] : o[0],
+                    chosenMean: o[2]||"",
                     mode: quizType
                 });
-                if(o===answer) examScore++;
+                if (o === answer) examScore++;
                 nextQuestion();
             }
         };
@@ -236,29 +255,28 @@ function nextQuestion(){
     });
 }
 
-function showReview(){
-    const overlay=document.createElement("div");
-    overlay.className="reviewOverlay";
-    const box=document.createElement("div");
-    box.className="reviewBox";
-    box.innerHTML="<h3>❌ 錯誤題目</h3>";
+function showReview() {
+    const overlay = document.createElement("div");
+    overlay.className = "reviewOverlay";
+    const box = document.createElement("div");
+    box.className = "reviewBox";
+    box.innerHTML = "<h3>❌ 錯誤題目</h3>";
 
-    wrongList.forEach((w,i)=>{
-        // 顯示模式對應
-        const questionDisplay = w.mode==="roma"?w.kana:w.roma;
-        const answerDisplay = w.mode==="roma"?w.roma:w.kana;
-        const chosenDisplay = w.chosen;
-        box.innerHTML+=`
+    wrongList.forEach((w, i) => {
+        const questionDisplay = w.mode === "roma" ? `${w.kana}（${w.mean}）` : `${w.roma}（${w.mean}）`;
+        const chosenDisplay = `${w.chosenText}（${w.chosenMean}）`;
+        const answerDisplay = w.mode === "roma" ? `${w.roma}（${w.mean}）` : `${w.kana}（${w.mean}）`;
+        box.innerHTML += `
         <div class="reviewItem">
-            ${i+1}. ${questionDisplay}<br>
+            ${i + 1}. ${questionDisplay}<br>
             <span class="reviewWrong">你選：${chosenDisplay}</span><br>
             <span class="reviewCorrect">正確：${answerDisplay}</span>
         </div>`;
     });
 
-    const btn=document.createElement("button");
-    btn.innerText="關閉";
-    btn.onclick=()=>overlay.remove();
+    const btn = document.createElement("button");
+    btn.innerText = "關閉";
+    btn.onclick = () => overlay.remove();
     box.appendChild(btn);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
