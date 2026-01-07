@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>日文練習</title>
+<style>
+body{
+    background:#121212;
+    color:#e0e0e0;
+    font-family:sans-serif;
+    margin:0;
+    padding:14px;
+    touch-action: manipulation;
+}
+h1{text-align:center;color:#90caf9;font-size:22px;}
+.controls{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:6px;
+    margin-bottom:10px;
+}
+button,select{
+    background:#1e1e1e;
+    color:#e0e0e0;
+    border:1px solid #333;
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:14px;
+    cursor:pointer;
+}
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+    gap:10px;
+}
+.card{
+    background:#1e1e1e;
+    border:1px solid #333;
+    border-radius:10px;
+    padding:12px;
+    text-align:center;
+}
+.kana{font-size:26px;font-weight:bold;}
+.roma{font-size:13px;color:#aaa;}
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.7);
+    display:none;
+    align-items:center;
+    justify-content:center;
+}
+.quizBox{
+    background:#1e1e1e;
+    border-radius:12px;
+    padding:18px;
+    width:90%;
+    max-width:360px;
+    text-align:center;
+}
+.question{font-size:24px;margin-bottom:8px;}
+.quizControls{
+    display:flex;
+    justify-content:flex-end;
+    margin-bottom:8px;
+}
+.choices{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+.choice{
+    background:#121212;
+    border:1px solid #333;
+    border-radius:8px;
+    padding:12px;
+    font-size:20px;
+    transition: background 0.3s;
+}
+
+/* 錯題檢視 */
+.reviewOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.85);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+}
+.reviewBox{
+    background:#1e1e1e;
+    width:90%;
+    max-width:380px;
+    max-height:80vh;
+    overflow-y:auto;
+    border-radius:12px;
+    padding:16px;
+}
+.reviewItem{
+    border-bottom:1px solid #333;
+    padding:12px 0;
+}
+.reviewWrong{color:#ef5350;}
+.reviewCorrect{color:#81c784;}
+.roma-word{
+    font-size:12px;
+    color:#aaa;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🇯🇵 日文練習</h1>
+
+<div class="controls">
+<select id="level" onchange="loadData()">
+  <option value="basic">五十音</option>
+  <option value="daku">濁音/半濁音</option>
+  <option value="you">拗音</option>
+  <option value="kanaAll">全部假名</option>
+  <option value="basicResponse">🗣️ 基本回應／溝通</option>
+  <option value="position">📍 指示／位置</option>
+  <option value="actions">🏃 動作／日常動詞</option>
+  <option value="family">👪 家人</option>
+  <option value="fps">🎮 FPS</option>
+  <option value="emotion">🧠 情緒／反應</option>
+  <option value="allCombined">📚 全部題庫</option>
+</select>
+
+<button onclick="startQuiz('visual','practice')">👀 單字 (練習)</button>
+<button onclick="startQuiz('visual','exam')">👀 單字 (考試)</button>
+<button onclick="startQuiz('roma','practice')">🔤 羅馬拼音 (練習)</button>
+<button onclick="startQuiz('roma','exam')">🔤 羅馬拼音 (考試)</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="modal" id="modal">
+<div class="quizBox">
+<div class="quizControls">
+<button onclick="stopQuiz()">⛔</button>
+</div>
+<div class="question" id="question">？</div>
+<div class="choices" id="choices"></div>
+</div>
+</div>
+
+<script>
+let pool=[], answer, quizType, quizMode;
+let orderRandom=false, questionIndex=0, maxQuestions=30;
+let examScore=0, wrongList=[]; 
+let quizPool=[];
+
+const data={
+basic:[["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"],["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"],["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"],["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"],["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"],["や","ya"],["ゆ","yu"],["よ","yo"],["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],["わ","wa"],["を","wo"],["ん","n"]],
+daku: [
+  ["が","ga"], ["ぎ","gi"], ["ぐ","gu"], ["げ","ge"], ["ご","go"],
+  ["ざ","za"], ["じ","ji"], ["ず","zu"], ["ぜ","ze"], ["ぞ","zo"],
+  ["だ","da"], ["ぢ","ji"], ["づ","zu"], ["で","de"], ["ど","do"],
+  ["ば","ba"], ["び","bi"], ["ぶ","bu"], ["べ","be"], ["ぼ","bo"],
+  ["ぱ","pa"], ["ぴ","pi"], ["ぷ","pu"], ["ぺ","pe"], ["ぽ","po"]],
+you: [["きゃ","kya"], ["きゅ","kyu"], ["きょ","kyo"], ["ぎゃ","gya"], ["ぎゅ","gyu"], ["ぎょ","gyo"], ["しゃ","sha"], ["しゅ","shu"], ["しょ","sho"], ["じゃ","ja"], ["じゅ","ju"], ["じょ","jo"], ["ちゃ","cha"], ["ちゅ","chu"], ["ちょ","cho"], ["にゃ","nya"], ["にゅ","nyu"], ["にょ","nyo"], ["ひゃ","hya"], ["ひゅ","hyu"], ["ひょ","hyo"], ["びゃ","bya"], ["びゅ","byu"], ["びょ","byo"], ["ぴゃ","pya"], ["ぴゅ","pyu"], ["ぴょ","pyo"], ["みゃ","mya"], ["みゅ","myu"], ["みょ","myo"], ["りゃ","rya"], ["りゅ","ryu"], ["りょ","ryo"],["ゔゃ","vya"], ["ゔゅ","vyu"], ["ゔょ","vyo"]],
+basicResponse:[["はい","hai","是"],["いいえ","iie","不是"],["ありがとう","arigatou","謝謝"],["こんにちは","konnichiwa","你好"],["おはよう","ohayou","早安"],["こんばんは","konbanwa","晚上好"],["おつかれさま","otsukaresama","辛苦了"],["ごめん","gomen","抱歉"],["ごめんなさい","gomennasai","對不起"],["すみません","sumimasen","不好意思／對不起"],["お願いします","onegaishimasu","拜託了"],["どうぞ","douzo","請"],["どういたしまして","douitashimashite","不客氣"],["いい","ii","好／可以"],["いいよ","ii yo","可以"],["だめ","dame","不行"],["だめだ","dame da","不行"],["おけ","oke","OK"],["わかった","wakatta","知道了"],["わかりました","wakarimashita","我知道了"],["わからない","wakaranai","不知道"],["しらない","shiranai","不知道"],["だいじょうぶ","daijoubu","沒事／沒問題"],["ともだち","tomodachi","朋友"],["がくせい","gakusei","學生"],["せんせい","sensei","老師"],["しゅくだい","shukudai","作業"],["がっこう","gakkou","學校"],["じかん","jikan","時間"]],
+position:[["ここ","koko","這裡"],["そこ","soko","那裡"],["あそこ","asoko","那邊"],["どこ","doko","哪裡"],["これ","kore","這個"],["それ","sore","那個"],["うえ","ue","上面"],["した","shita","下面"],["なか","naka","裡面"],["そと","soto","外面"],["ひだり","hidari","左"],["みぎ","migi","右"],["まえ","mae","前"],["うしろ","ushiro","後面"]],
+actions:[["いく","iku","去"],["くる","kuru","來"],["かえる","kaeru","回去"],["はいる","hairu","進去"],["でる","deru","出去"],["まって","matte","等等"],["ちょっとまって","chotto matte","等一下"],["みる","miru","看"],["きく","kiku","聽／問"],["はなす","hanasu","說話"],["する","suru","做"],["つかう","tsukau","用"],["かう","kau","買"],["あそぶ","asobu","玩"],["いっしょにあそぶ","issho ni asobu","一起玩"],["べんきょう","benkyou","學習"]],
+family:[["ちち","chichi","父／爸爸"],["おとうさん","otousan","爸爸"],["パパ","papa","爸爸（小孩／親暱）"],["おやじ","oyaji","爸爸（口語）"],["はは","haha","母／媽媽"],["おかあさん","okaasan","媽媽"],["ママ","mama","媽媽（小孩／親暱）"],["おふくろ","ofukuro","媽媽（口語）"],["あに","ani","哥哥"],["おにいさん","oniisan","哥哥（敬稱）"],["おにいちゃん","oniichan","哥哥（親暱）"],["あね","ane","姐姐"],["おねえさん","oneesan","姐姐（敬稱）"],["おねえちゃん","oneechan","姐姐（親暱）"],["おとうと","otouto","弟弟"],["いもうと","imouto","妹妹"],["きょうだい","kyoudai","兄弟姊妹（統稱）"],["しまい","shimai","姊妹"],["きょうだいしまい","kyoudai shimai","兄弟姊妹"],["そふ","sofu","祖父"],["じいちゃん","jiichan","爺爺（親暱）"],["おじいちゃん","ojiichan","爺爺（親暱）"],["そぼ","sobo","祖母"],["ばあちゃん","baachan","奶奶（親暱）"],["おばあちゃん","obaachan","奶奶（親暱）"],["むすこ","musuko","兒子"],["むすめ","musume","女兒"],["こども","kodomo","孩子"],["まご","mago","孫子／孫女"],["つま","tsuma","妻子（自己說）"],["よめ","yome","老婆／媳婦"],["おっと","otto","丈夫"],["だんな","danna","老公"],["はいぐうしゃ","haiguusha","配偶"],["りょうしん","ryoushin","父母"],["おや","oya","父母／家長"],["おやこ","oyako","親子"],["おじ","oji","叔叔／伯伯"],["おば","oba","阿姨／伯母"],["おい","oi","姪子／外甥"],["めい","mei","姪女／外甥女"],["いとこ","itoko","堂／表兄弟姊妹"],["しんせき","shinseki","親戚"],["ぎりのちち","giri no chichi","岳父／公公"],["ぎりのはは","giri no haha","岳母／婆婆"],["かぞく","kazoku","家人／家庭"],["かぞくいん","kazokuin","家庭成員"],["いっか","ikka","一家人"],["かてい","katei","家庭"],["うち","uchi","我家／家裡"],["じたく","jitaku","自己家"],["うちの","uchi no","我家的～"],["かぞくみんな","kazoku minna","全家人"],["かぞくぐるみ","kazokugurumi","全家一起"]],
+fps:[["てき","teki","敵人"],["てきいる","teki iru","有敵人"],["ここてき","koko teki","這裡有敵"],["ひとり","hitori","一個人"],["ふたり","futari","兩個人"],["すうにん","suu-nin","好幾個人"],["いる","iru","有人"],["いない","inai","沒人"],["じゅう","juu","槍"],["ぶき","buki","武器"],["だん","dan","子彈"],["だんない","dan nai","沒子彈"],["じゅうない","juu nai","沒槍"],["えいむ","eimu","瞄準"],["りろーど","riroodo","換彈"],["しゃげき","shageki","射擊"],["かばー","kabaa","掩護"],["らっしゅ","rasshu","衝鋒"],["ひくよ","hiku yo","要撤了"],["ふぁいと","faito","開打"],["おとす","otosu","擊倒"],["のっく","nokku","擊倒（未死）"],["だうん","daun","倒地"],["おこす","okosu","救人"],["おこして","okoshite","救我"],["あんち","anchi","安全區"],["あんちはいった","anchi haitta","進入安全區"],["あんちそと","anchi soto","在圈外"],["つぎあんち","tsugi anchi","下一個安全區"],["あーまー","aamaa","護甲"],["あーまーわれ","aamaa ware","護甲破了"],["しろあーまー","shiro aamaa","白甲"],["あおあーまー","ao aamaa","藍甲"],["むらさきあーまー","murasaki aamaa","紫甲"],["きんあーまー","kin aamaa","金甲"],["あかあーまー","aka aamaa","紅甲"],["ばってりー","batterii","電池"],["ばっくぱっく","bakkupakku","背包"],["けんさつ","kensatsu","檢查"],["そなえ","sona","補給"],["ぴん","pin","標記"]],
+emotion:[["まじ","maji","真的假的"],["やばい","yabai","糟了／很猛"],["すごい","sugoi","厲害"],["むずい","muzui","好難"],["きつい","kitsui","很硬／難打"],["いたい","itai","好痛"],["つらい","tsurai","難受"],["だるい","darui","好累／煩"],["なるほど","naruhodo","原來如此"],["たしかに","tashikani","確實"],["まあいい","maa ii","算了"],["こわい","kowai","可怕"],["うれしい","ureshii","開心"],["かなしい","kanashii","難過"],["いらいら","iraira","煩躁"],["はらがたつ","haragata tsu","生氣"],["かわいい","kawaii","可愛"],["つよい","tsuyoi","強大"],["すき","suki","喜歡"],["だいすき","daisuki","最喜歡"],["あい","ai","愛"],["いそがしい","isogashii","忙碌"],["たのしい","tanoshii","快樂"],["むずかしい","muzukashii","困難"],["かんたん","kantan","簡單"],["しんせつ","shinsetsu","親切"],["だいじ","daiji","重要"],["ゆめ","yume","夢想"],["きぼう","kibou","希望"],["せいちょう","seichou","成長"],["しっぱい","shippai","失敗"],["せいこう","seikou","成功"],["ちから","chikara","力量"],["こころ","kokoro","心"]]
+};
+
+function loadData(){
+    const lv = level.value;
+
+    if(lv === "allCombined"){
+        // 合併所有分類單字（保持每行資料獨立）
+        pool = [
+          ...data.basic,
+          ...data.daku,
+          ...data.you,
+          ...data.basicResponse,
+          ...data.position,
+          ...data.actions,
+          ...data.family,
+          ...data.fps,
+          ...data.emotion
+        ];
+    } else if(lv === "all"){
+        pool = [...data.words];
+    } else if(lv === "kanaAll") {
+        pool = [...data.basic, ...data.daku, ...data.you];
+    } else {
+        pool = [...data[lv]];
+    }
+
+    if(orderRandom) pool.sort(() => Math.random() - 0.5);
+
+grid.innerHTML = "";
+pool.forEach(k => {
+    const c = document.createElement("div");
+    c.className = "card";
+
+    if(
+        lv === "basicResponse" ||
+        lv === "position" ||
+        lv === "actions" ||
+        lv === "family" ||
+        lv === "fps" ||
+        lv === "emotion" ||
+        lv === "allCombined"
+    ){
+        c.innerHTML = `
+          <p>
+            <strong>${k[0]}</strong><br>
+            <span class="roma-word">(${k[1]})</span><br>
+            ${k[2] || ""}
+          </p>
+        `;
+    } else {
+        c.innerHTML = `<p><strong>${k[0]}</strong><br>${k[1]}</p>`;
+    }
+
+    grid.appendChild(c);
+});
+}
+
+function startQuiz(t, m) {
+    quizType = t;
+    quizMode = m;
+    questionIndex = 0;
+    examScore = 0;
+    wrongList = [];
+
+    let availableQuestions = pool.length;
+
+    if (quizMode === "exam") {
+        // 題目數 = 單字總數 - 1，如果小於1，至少取1題
+        const numQuestions = Math.max(1, availableQuestions - 1);
+        quizPool = [...pool].sort(() => Math.random() - 0.5).slice(0, numQuestions);
+    } else {
+        // 練習模式：整個題庫、隨機
+        quizPool = [...pool].sort(() => Math.random() - 0.5);
+    }
+
+    modal.style.display = "flex";
+    grid.style.display = "none";
+    nextQuestion();
+}
+
+function stopQuiz() {
+    modal.style.display = "none";
+    grid.style.display = "grid";
+    loadData(); // ← 就是這一行
+    if (quizMode === "exam") {
+        if (wrongList.length) showReview();
+        alert(`考試結束：${examScore}/${maxQuestions}`);
+    }
+}
+
+function nextQuestion() {
+if (questionIndex >= quizPool.length) {
+    if (quizMode === "exam") {
+        stopQuiz();
+        return;
+    } else {
+        // 練習模式：重新洗牌、從頭來
+        questionIndex = 0;
+        quizPool.sort(() => Math.random() - 0.5);
+    }
+}
+    answer = quizPool[questionIndex];
+    questionIndex++;
+
+question.innerHTML =
+    quizType === "roma"
+    ? `${quizMode === "exam" ? questionIndex + ". " : ""}${answer[0]}<br><span style="font-size:14px;color:#aaa;">（${answer[2]||""}）</span>`
+    : `${quizMode === "exam" ? questionIndex + ". " : ""}${answer[1]}<br><span style="font-size:14px;color:#aaa;">（${answer[2]||""}）</span>`;
+
+    const box = choices;
+    box.innerHTML = "";
+
+    const opts = [answer];
+    while (opts.length < 4) {
+        const r = pool[Math.floor(Math.random() * pool.length)];
+        if (!opts.includes(r)) opts.push(r);
+    }
+    opts.sort(() => Math.random() - 0.5);
+
+opts.forEach((o, i) => {
+        const b = document.createElement("div");
+        b.className = "choice";
+        b.innerText = `${i + 1}. ` + (quizType === "roma" ? o[1] : o[0]);
+        b.innerText = `${i + 1}. ` + (quizType === "roma" ? o[1] : o[0]);
+        b.dataset.correct = (o === answer);
+        b.onclick = () => {
+            if (quizMode === "practice") {
+                if (o === answer) {
+                    b.style.backgroundColor = "#81c784"; 
+                } else {
+                    b.style.backgroundColor = "#ef5350";
+                  Array.from(box.children).forEach(c => {
+    if (c.dataset.correct === "true") {
+        c.style.backgroundColor = "#81c784";
+    }
+});
+
+                }
+                setTimeout(nextQuestion, 800);
+            } else if (quizMode === "exam") {
+                if (o !== answer) wrongList.push({
+                    qNum: questionIndex,
+                    kana: answer[0],
+                    roma: answer[1],
+                    mean: answer[2]||"",  
+                    chosenText: quizType === "roma" ? o[1] : o[0],
+                    chosenMean: o[2]||"",
+                    mode: quizType
+                });
+                if (o === answer) examScore++;
+                nextQuestion();
+            }
+        };
+        box.appendChild(b);
+    });
+}
+
+function showReview() {
+    const overlay = document.createElement("div");
+    overlay.className = "reviewOverlay";
+    const box = document.createElement("div");
+    box.className = "reviewBox";
+    box.innerHTML = "<h3>❌ 錯誤題目</h3>";
+
+wrongList.forEach((w, i) => {
+    const questionDisplay = w.mode === "roma" ? `${w.kana}（${w.mean}）` : `${w.roma}（${w.mean}）`;
+    const chosenDisplay = `${w.chosenText}（${w.chosenMean}）`;
+    const answerDisplay = w.mode === "roma" ? `${w.roma}（${w.mean}）` : `${w.kana}（${w.mean}）`;
+    box.innerHTML += `
+    <div class="reviewItem">
+        第${w.qNum}題<br>
+        ${questionDisplay}<br>
+        <span class="reviewWrong">你選：${chosenDisplay}</span><br>
+        <span class="reviewCorrect">正確：${answerDisplay}</span>
+    </div>`;
+});
+
+    const btn = document.createElement("button");
+    btn.innerText = "關閉";
+    btn.onclick = () => overlay.remove();
+    box.appendChild(btn);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+}
+
+loadData();
+</script>
+
+</body>
+</html>
