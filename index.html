@@ -119,10 +119,10 @@ button,select{
 
 <div class="controls">
 <select id="level" onchange="loadData()">
-  <option value="basic">五十音</option>
-  <option value="daku">濁音/半濁音</option>
-  <option value="you">拗音</option>
-  <option value="kanaAll">全部假名</option>
+  <option value="basic">5️⃣0️⃣五十音</option>
+  <option value="daku">2️⃣5️⃣濁音/半濁音</option>
+  <option value="you">3️⃣6️⃣拗音</option>
+  <option value="kanaAll">1️⃣0️⃣7️⃣全部假名</option>
   <option value="basicResponse">🗣️ 基本回應／溝通</option>
   <option value="position">📍 指示／位置</option>
   <option value="actions">🏃 動作／日常動詞</option>
@@ -155,13 +155,14 @@ let pool=[], answer, quizType, quizMode;
 let orderRandom=false, questionIndex=0, maxQuestions=30;
 let examScore=0, wrongList=[]; 
 let quizPool=[];
+let answerList = [];
 
 const data={
 basic:[["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"],["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"],["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"],["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"],["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"],["や","ya"],["ゆ","yu"],["よ","yo"],["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],["わ","wa"],["を","wo"],["ん","n"]],
 daku: [
   ["が","ga"], ["ぎ","gi"], ["ぐ","gu"], ["げ","ge"], ["ご","go"],
-  ["ざ","za"], ["じ","ji"], ["ず","zu"], ["ぜ","ze"], ["ぞ","zo"],
-  ["だ","da"], ["ぢ","ji"], ["づ","zu"], ["で","de"], ["ど","do"],
+  ["ざ","za"], ["じ","ji(1)"], ["ず","zu(1)"], ["ぜ","ze"], ["ぞ","zo"],
+  ["だ","da"], ["ぢ","ji(2)"], ["づ","zu(2)"], ["で","de"], ["ど","do"],
   ["ば","ba"], ["び","bi"], ["ぶ","bu"], ["べ","be"], ["ぼ","bo"],
   ["ぱ","pa"], ["ぴ","pi"], ["ぷ","pu"], ["ぺ","pe"], ["ぽ","po"]],
 you: [["きゃ","kya"], ["きゅ","kyu"], ["きょ","kyo"], ["ぎゃ","gya"], ["ぎゅ","gyu"], ["ぎょ","gyo"], ["しゃ","sha"], ["しゅ","shu"], ["しょ","sho"], ["じゃ","ja"], ["じゅ","ju"], ["じょ","jo"], ["ちゃ","cha"], ["ちゅ","chu"], ["ちょ","cho"], ["にゃ","nya"], ["にゅ","nyu"], ["にょ","nyo"], ["ひゃ","hya"], ["ひゅ","hyu"], ["ひょ","hyo"], ["びゃ","bya"], ["びゅ","byu"], ["びょ","byo"], ["ぴゃ","pya"], ["ぴゅ","pyu"], ["ぴょ","pyo"], ["みゃ","mya"], ["みゅ","myu"], ["みょ","myo"], ["りゃ","rya"], ["りゅ","ryu"], ["りょ","ryo"],["ゔゃ","vya"], ["ゔゅ","vyu"], ["ゔょ","vyo"]],
@@ -234,14 +235,16 @@ function startQuiz(t, m) {
     questionIndex = 0;
     examScore = 0;
     wrongList = [];
+    answerList = [];
 
     let availableQuestions = pool.length;
 
-    if (quizMode === "exam") {
-        // 題目數 = 單字總數 - 1，如果小於1，至少取1題
-        const numQuestions = Math.max(1, availableQuestions - 1);
-        quizPool = [...pool].sort(() => Math.random() - 0.5).slice(0, numQuestions);
-    } else {
+if (quizMode === "exam") {
+    // 題目數 = 單字總數 + 0（也就是全部題庫）
+    const numQuestions = availableQuestions; // 原本減1的地方去掉
+    quizPool = [...pool].sort(() => Math.random() - 0.5).slice(0, numQuestions);
+}
+ else {
         // 練習模式：整個題庫、隨機
         quizPool = [...pool].sort(() => Math.random() - 0.5);
     }
@@ -254,10 +257,19 @@ function startQuiz(t, m) {
 function stopQuiz() {
     modal.style.display = "none";
     grid.style.display = "grid";
-    loadData(); // ← 就是這一行
-    if (quizMode === "exam") {
-        if (wrongList.length) showReview();
-        alert(`考試結束：${examScore}/${maxQuestions}`);
+    loadData();
+
+    const answered = answerList.length;       // 已作答題數
+    const correct = examScore;                // 答對題數
+
+    if (quizMode === "exam" || quizMode === "practice") {
+        if (wrongList.length) showReview();  // 無論考試或練習，只要有錯題就顯示
+
+        if (quizMode === "exam") {
+            alert(`考試結束：${correct}/${quizPool.length} （已答題：${answered}）`);
+        } else if (quizMode === "practice") {
+            alert(`練習結束：${correct}/${answered}`);
+        }
     }
 }
 
@@ -296,34 +308,65 @@ opts.forEach((o, i) => {
         b.innerText = `${i + 1}. ` + (quizType === "roma" ? o[1] : o[0]);
         b.innerText = `${i + 1}. ` + (quizType === "roma" ? o[1] : o[0]);
         b.dataset.correct = (o === answer);
-        b.onclick = () => {
-            if (quizMode === "practice") {
-                if (o === answer) {
-                    b.style.backgroundColor = "#81c784"; 
-                } else {
-                    b.style.backgroundColor = "#ef5350";
-                  Array.from(box.children).forEach(c => {
-    if (c.dataset.correct === "true") {
-        c.style.backgroundColor = "#81c784";
-    }
-});
+b.onclick = () => {
+if (quizMode === "practice") {
+    if (b.dataset.locked === "true") return;
+    Array.from(box.children).forEach(c => c.dataset.locked = "true");
 
-                }
-                setTimeout(nextQuestion, 800);
-            } else if (quizMode === "exam") {
-                if (o !== answer) wrongList.push({
-                    qNum: questionIndex,
-                    kana: answer[0],
-                    roma: answer[1],
-                    mean: answer[2]||"",  
-                    chosenText: quizType === "roma" ? o[1] : o[0],
-                    chosenMean: o[2]||"",
-                    mode: quizType
-                });
-                if (o === answer) examScore++;
-                nextQuestion();
-            }
-        };
+    const isCorrect = (o === answer);
+
+    // 記錄作答
+    const record = {
+        qNum: questionIndex,
+        kana: answer[0],
+        roma: answer[1],
+        mean: answer[2] || "",
+        chosenText: quizType === "roma" ? o[1] : o[0],
+        chosenMean: o[2] || "",
+        correctText: quizType === "roma" ? answer[1] : answer[0],
+        correctMean: answer[2] || "",
+        mode: quizType,
+        correct: isCorrect
+    };
+    answerList.push(record);
+
+    // 答對累加
+    if (isCorrect) examScore++;
+    else wrongList.push(record); // ← 把錯題加入 wrongList
+
+    // 顯示顏色提示
+    if (isCorrect) {
+        b.style.backgroundColor = "#81c784";
+    } else {
+        b.style.backgroundColor = "#ef5350";
+        Array.from(box.children).forEach(c => {
+            if (c.dataset.correct === "true") c.style.backgroundColor = "#81c784";
+        });
+    }
+
+    setTimeout(nextQuestion, 600);
+}
+
+    // 考試模式維持原本行為
+    if (quizMode === "exam") {
+        const isCorrect = (o === answer);
+        answerList.push({
+            qNum: questionIndex,
+            kana: answer[0],
+            roma: answer[1],
+            mean: answer[2] || "",
+            chosenText: quizType === "roma" ? o[1] : o[0],
+            chosenMean: o[2] || "",
+            correctText: quizType === "roma" ? answer[1] : answer[0],
+            correctMean: answer[2] || "",
+            mode: quizType,
+            correct: isCorrect
+        });
+        if (!isCorrect) wrongList.push(answerList.at(-1));
+        if (isCorrect) examScore++;
+        nextQuestion();
+    }
+};
         box.appendChild(b);
     });
 }
@@ -335,18 +378,29 @@ function showReview() {
     box.className = "reviewBox";
     box.innerHTML = "<h3>❌ 錯誤題目</h3>";
 
-wrongList.forEach((w, i) => {
-    const questionDisplay = w.mode === "roma" ? `${w.kana}（${w.mean}）` : `${w.roma}（${w.mean}）`;
-    const chosenDisplay = `${w.chosenText}（${w.chosenMean}）`;
-    const answerDisplay = w.mode === "roma" ? `${w.roma}（${w.mean}）` : `${w.kana}（${w.mean}）`;
-    box.innerHTML += `
-    <div class="reviewItem">
-        第${w.qNum}題<br>
-        ${questionDisplay}<br>
-        <span class="reviewWrong">你選：${chosenDisplay}</span><br>
-        <span class="reviewCorrect">正確：${answerDisplay}</span>
-    </div>`;
-});
+    let wrongCounter = 0;
+
+    answerList.forEach((w) => {
+        const questionDisplay = w.mode === "roma" ? `${w.kana}（${w.mean}）` : `${w.roma}（${w.mean}）`;
+        const chosenDisplay = `${w.chosenText}（${w.chosenMean}）`;
+        const answerDisplay = w.mode === "roma" ? `${w.roma}（${w.mean}）` : `${w.kana}（${w.mean}）`;
+
+        // 題號遞增
+        wrongCounter++;
+
+        box.innerHTML += `
+        <div class="reviewItem">
+            第${wrongCounter}題<br>
+            ${questionDisplay}<br>
+${w.correct
+  ? `<span class="reviewCorrect">你選：${chosenDisplay}</span>`
+  : `
+    <span class="reviewWrong">你選：${chosenDisplay}</span><br>
+    <span class="reviewCorrect">正確：${answerDisplay}</span>
+  `
+}
+        </div>`;
+    });
 
     const btn = document.createElement("button");
     btn.innerText = "關閉";
