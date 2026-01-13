@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>日文練習</title>
 <style>
 body{
@@ -41,7 +41,6 @@ button,select{
     border-radius:10px;
     padding:12px;
     text-align:center;
-    position:relative;
 }
 .kana{font-size:26px;font-weight:bold;}
 .roma{font-size:13px;color:#aaa;}
@@ -111,51 +110,11 @@ button,select{
     font-size:12px;
     color:#aaa;
 }
-.sound-btn{
-    position:absolute;
-    top:10px;
-    right:10px;
-    font-size:16px;
-    background:#121212;
-    border:1px solid #333;
-    border-radius:50%;
-    padding:4px 6px;
-    cursor:pointer;
-}
-.sound-btn:active{
-    background:#333;
-}
-.unlock-btn{
-    display:block;
-    margin:10px auto;
-    padding:6px 12px;
-    font-size:14px;
-    background:#1e1e1e;
-    border:1px solid #333;
-    border-radius:8px;
-    color:#fff;
-}
- #unlockAudio {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 10px 15px;
-    font-size: 20px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    z-index: 9999;
-  }
-
 </style>
 </head>
 
 <body>
 
-
-<button id="unlockAudio">🔊</button>
 <h1>🇯🇵 日文練習</h1>
 
 <div class="controls">
@@ -257,25 +216,12 @@ if(k.length >= 3){
       <p>
         <strong>${k[0]}</strong><br>
         <span class="roma-word">(${k[1]})</span><br>
-        ${k[2]}<br>
-        <button class="sound-btn">🔊</button>
+        ${k[2]}
       </p>
     `;
 } else {
-    c.innerHTML = `
-      <p>
-        <strong>${k[0]}</strong><br>
-        ${k[1]}<br>
-        <button class="sound-btn">🔊</button>
-      </p>
-    `;
+    c.innerHTML = `<p><strong>${k[0]}</strong><br>${k[1]}</p>`;
 }
-
-const btn = c.querySelector(".sound-btn");
-btn.onclick = (e) => {
-    e.stopPropagation(); // 不影響卡片其他點擊
-    speakJP(k[0]);       // 唸日文
-};
     grid.appendChild(c);
 });
 }
@@ -460,35 +406,6 @@ ${w.correct
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 }
-
-let audioCtx; // 全域變數，先不創建
-
-// TTS 語音函式
-function speakJP(text) {
-    if (!window.speechSynthesis) return;
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'ja-JP';
-    speechSynthesis.speak(utter);
-}
-
-document.getElementById("unlockAudio").onclick = () => {
-    // 1️⃣ 建立 AudioContext（手機需要在點擊事件裡建立）
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
-    // 2️⃣ 如果被暫停就恢復
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-
-    // 3️⃣ 播放聲音
-    speakJP("こんにちは"); // 例子：日語「你好」
-
-    // 4️⃣ 隱藏按鈕
-    document.getElementById("unlockAudio").style.display = "none";
-};
-
 
 loadData();
 </script>
