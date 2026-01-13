@@ -41,6 +41,7 @@ button,select{
     border-radius:10px;
     padding:12px;
     text-align:center;
+    position:relative;
 }
 .kana{font-size:26px;font-weight:bold;}
 .roma{font-size:13px;color:#aaa;}
@@ -110,6 +111,21 @@ button,select{
     font-size:12px;
     color:#aaa;
 }
+.sound-btn{
+    position:absolute;
+    top:6px;
+    right:6px;
+    font-size:16px;
+    background:#121212;
+    border:1px solid #333;
+    border-radius:50%;
+    padding:4px 6px;
+    cursor:pointer;
+}
+.sound-btn:active{
+    background:#333;
+}
+
 </style>
 </head>
 
@@ -216,12 +232,25 @@ if(k.length >= 3){
       <p>
         <strong>${k[0]}</strong><br>
         <span class="roma-word">(${k[1]})</span><br>
-        ${k[2]}
+        ${k[2]}<br>
+        <button class="sound-btn">🔊</button>
       </p>
     `;
 } else {
-    c.innerHTML = `<p><strong>${k[0]}</strong><br>${k[1]}</p>`;
+    c.innerHTML = `
+      <p>
+        <strong>${k[0]}</strong><br>
+        ${k[1]}<br>
+        <button class="sound-btn">🔊</button>
+      </p>
+    `;
 }
+
+const btn = c.querySelector(".sound-btn");
+btn.onclick = (e) => {
+    e.stopPropagation(); // 不影響卡片其他點擊
+    speakJP(k[0]);       // 唸日文
+};
     grid.appendChild(c);
 });
 }
@@ -406,6 +435,18 @@ ${w.correct
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 }
+
+function speakJP(text){
+    if (!window.speechSynthesis) return;
+
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ja-JP";
+    u.rate = 0.9;   // 語速（0.8 慢、1 正常）
+
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+}
+
 
 loadData();
 </script>
