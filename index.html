@@ -113,8 +113,8 @@ button,select{
 }
 .sound-btn{
     position:absolute;
-    top:6px;
-    right:6px;
+    top:8px;
+    right:8px;
     font-size:16px;
     background:#121212;
     border:1px solid #333;
@@ -125,11 +125,26 @@ button,select{
 .sound-btn:active{
     background:#333;
 }
+.unlock-btn{
+    display:block;
+    margin:10px auto;
+    padding:6px 12px;
+    font-size:14px;
+    background:#1e1e1e;
+    border:1px solid #333;
+    border-radius:8px;
+    color:#fff;
+}
 
 </style>
 </head>
 
 <body>
+
+
+<button id="unlockAudio" class="unlock-btn">
+  🔓 開啟語音
+</button>
 
 <h1>🇯🇵 日文練習</h1>
 
@@ -446,6 +461,12 @@ function speakJP(text){
     speechSynthesis.cancel();
     speechSynthesis.speak(u);
 }
+
+document.getElementById("unlockAudio").onclick = () => {
+    speakJP("あ");
+    document.getElementById("unlockAudio").style.display = "none";
+};
+
 
 
 loadData();
