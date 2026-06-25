@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>日文練習</title>
+<style>
+body{
+    background:#121212;
+    color:#e0e0e0;
+    font-family:sans-serif;
+    margin:0;
+    padding:14px;
+    touch-action: manipulation;
+}
+h1{text-align:center;color:#90caf9;font-size:22px;}
+.controls{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:6px;
+    margin-bottom:10px;
+}
+button,select{
+    background:#1e1e1e;
+    color:#e0e0e0;
+    border:1px solid #333;
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:14px;
+    cursor:pointer;
+}
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+    gap:10px;
+}
+.card{
+    background:#1e1e1e;
+    border:1px solid #333;
+    border-radius:10px;
+    padding:12px;
+    text-align:center;
+}
+.kana{font-size:26px;font-weight:bold;}
+.roma{font-size:13px;color:#aaa;}
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.7);
+    display:none;
+    align-items:center;
+    justify-content:center;
+}
+.quizBox{
+    background:#1e1e1e;
+    border-radius:12px;
+    padding:18px;
+    width:90%;
+    max-width:360px;
+    text-align:center;
+}
+.question{font-size:24px;margin-bottom:8px;}
+.quizControls{
+    display:flex;
+    justify-content:flex-end;
+    margin-bottom:8px;
+}
+.choices{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+.choice{
+    background:#121212;
+    border:1px solid #333;
+    border-radius:8px;
+    padding:12px;
+    font-size:20px;
+    transition: background 0.3s;
+}
+
+/* 錯題檢視 */
+.reviewOverlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.85);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+}
+.reviewBox{
+    background:#1e1e1e;
+    width:90%;
+    max-width:380px;
+    max-height:80vh;
+    overflow-y:auto;
+    border-radius:12px;
+    padding:16px;
+}
+.reviewItem{
+    border-bottom:1px solid #333;
+    padding:12px 0;
+}
+.reviewWrong{color:#ef5350;}
+.reviewCorrect{color:#81c784;}
+.roma-word{
+    font-size:12px;
+    color:#aaa;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🇯🇵 日文練習</h1>
+
+<div class="controls">
+<select id="level" onchange="loadData()">
+  <option value="basic">4️⃣6️⃣五十音(平假)</option>
+  <option value="daku">2️⃣5️⃣濁音/半濁音(平假)</option>
+  <option value="you">3️⃣6️⃣拗音(平假)</option>
+  <option value="basic1">4️⃣6️⃣五十音(片假)</option>
+  <option value="daku1">2️⃣5️⃣濁音/半濁音(片假)</option>
+  <option value="you1">3️⃣6️⃣拗音(片假)</option>
+  <option value="kanaAll">2️⃣1️⃣4️⃣全部假名</option>
+  <option value="basicResponse">🗣️ 基本回應／溝通</option>
+  <option value="position">📍 指示／位置</option>
+  <option value="actions">🏃 動作／日常動詞</option>
+  <option value="family">👪 家人</option>
+  <option value="fps">🎮 FPS</option>
+  <option value="emotion">🧠 情緒／反應</option>
+  <option value="allCombined">📚 全部題庫</option>
+  <option value="vocabulary">🇯🇵 單詞</option>
+  <option value="N5">🇯🇵 N5</option>
+</select>
+
+<button onclick="startQuiz('visual','practice')">👀 單字 (練習)</button>
+<button onclick="startQuiz('visual','exam')">👀 單字 (考試)</button>
+<button onclick="startQuiz('roma','practice')">🔤 羅馬拼音 (練習)</button>
+<button onclick="startQuiz('roma','exam')">🔤 羅馬拼音 (考試)</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="modal" id="modal">
+<div class="quizBox">
+<div class="quizControls">
+<button onclick="stopQuiz()">⛔</button>
+</div>
+<div class="question" id="question">？</div>
+<div class="choices" id="choices"></div>
+</div>
+</div>
+
+<script>
+let pool=[], answer, quizType, quizMode;
+let orderRandom=false, questionIndex=0, maxQuestions=30;
+let examScore=0, wrongList=[]; 
+let quizPool=[];
+let answerList = [];
+
+const data={
+basic:[["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"],["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"],["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"],["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"],["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"],["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"],["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"],["や","ya"],["ゆ","yu"],["よ","yo"],["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"],["わ","wa"],["を","wo"],["ん","n"]],
+daku: [["が","ga"], ["ぎ","gi"], ["ぐ","gu"], ["げ","ge"], ["ご","go"],["ざ","za"], ["じ","ji(1)"], ["ず","zu(1)"], ["ぜ","ze"], ["ぞ","zo"],["だ","da"], ["ぢ","ji(2)"], ["づ","zu(2)"], ["で","de"], ["ど","do"],["ば","ba"], ["び","bi"], ["ぶ","bu"], ["べ","be"], ["ぼ","bo"],["ぱ","pa"], ["ぴ","pi"], ["ぷ","pu"], ["ぺ","pe"], ["ぽ","po"]],
+you: [["きゃ","kya"], ["きゅ","kyu"], ["きょ","kyo"], ["ぎゃ","gya"], ["ぎゅ","gyu"], ["ぎょ","gyo"], ["しゃ","sha"], ["しゅ","shu"], ["しょ","sho"], ["じゃ","ja"], ["じゅ","ju"], ["じょ","jo"], ["ちゃ","cha"], ["ちゅ","chu"], ["ちょ","cho"], ["にゃ","nya"], ["にゅ","nyu"], ["にょ","nyo"], ["ひゃ","hya"], ["ひゅ","hyu"], ["ひょ","hyo"], ["びゃ","bya"], ["びゅ","byu"], ["びょ","byo"], ["ぴゃ","pya"], ["ぴゅ","pyu"], ["ぴょ","pyo"], ["みゃ","mya"], ["みゅ","myu"], ["みょ","myo"], ["りゃ","rya"], ["りゅ","ryu"], ["りょ","ryo"],["ゔゃ","vya"], ["ゔゅ","vyu"], ["ゔょ","vyo"]],
+basic1:[["ア","a"],["イ","i"],["ウ","u"],["エ","e"],["オ","o"],["カ","ka"],["キ","ki"],["ク","ku"],["ケ","ke"],["コ","ko"],["サ","sa"],["シ","shi"],["ス","su"],["セ","se"],["ソ","so"],["タ","ta"],["チ","chi"],["ツ","tsu"],["テ","te"],["ト","to"],["ナ","na"],["ニ","ni"],["ヌ","nu"],["ネ","ne"],["ノ","no"],["ハ","ha"],["ヒ","hi"],["フ","fu"],["ヘ","he"],["ホ","ho"],["マ","ma"],["ミ","mi"],["ム","mu"],["メ","me"],["モ","mo"],["ヤ","ya"],["ユ","yu"],["ヨ","yo"],["ラ","ra"],["リ","ri"],["ル","ru"],["レ","re"],["ロ","ro"],["ワ","wa"],["ヲ","wo"],["ン","n"]],
+daku1:[["ガ","ga"], ["ギ","gi"], ["グ","gu"], ["ゲ","ge"], ["ゴ","go"],["ザ","za"], ["ジ","ji(1)"], ["ズ","zu(1)"], ["ゼ","ze"], ["ゾ","zo"],["ダ","da"], ["ヂ","ji(2)"], ["ヅ","zu(2)"], ["デ","de"], ["ド","do"], ["バ","ba"], ["ビ","bi"], ["ブ","bu"], ["ベ","be"], ["ボ","bo"],["パ","pa"], ["ピ","pi"], ["プ","pu"], ["ペ","pe"], ["ポ","po"]],
+you1:[["キャ","kya"], ["キュ","kyu"], ["キョ","kyo"],["ギャ","gya"], ["ギュ","gyu"], ["ギョ","gyo"],["シャ","sha"], ["シュ","shu"], ["ショ","sho"],["ジャ","ja"], ["ジュ","ju"], ["ジョ","jo"],["チャ","cha"], ["チュ","chu"], ["チョ","cho"],["ニャ","nya"], ["ニュ","nyu"], ["ニョ","nyo"],["ヒャ","hya"], ["ヒュ","hyu"], ["ヒョ","hyo"],["ビャ","bya"], ["ビュ","byu"], ["ビョ","byo"],["ピャ","pya"], ["ピュ","pyu"], ["ピョ","pyo"],["ミャ","mya"], ["ミュ","myu"], ["ミョ","myo"],["リャ","rya"], ["リュ","ryu"], ["リョ","ryo"],["ヴャ","vya"], ["ヴュ","vyu"], ["ヴョ","vyo"]],
+basicResponse:[["はい","hai","是"],["いいえ","iie","不是"],["ありがとう","arigatou","謝謝"],["こんにちは","konnichiwa","你好"],["おはよう","ohayou","早安"],["こんばんは","konbanwa","晚上好"],["おつかれさま","otsukaresama","辛苦了"],["ごめん","gomen","抱歉"],["ごめんなさい","gomennasai","對不起"],["すみません","sumimasen","不好意思／對不起"],["おねがいします","onegaishimasu","拜託了"],["どうぞ","douzo","請"],["どういたしまして","douitashimashite","不客氣"],["いい","ii","好／可以"],["いいよ","ii yo","可以"],["だめ","dame","不行"],["だめだ","dame da","不行"],["おけ","oke","OK"],["わかった","wakatta","知道了"],["わかりました","wakarimashita","我知道了"],["わからない","wakaranai","不知道"],["しらない","shiranai","不知道"],["だいじょうぶ","daijoubu","沒事／沒問題"],["ともだち","tomodachi","朋友"],["がくせい","gakusei","學生"],["せんせい","sensei","老師"],["しゅくだい","shukudai","作業"],["がっこう","gakkou","學校"],["じかん","jikan","時間"]],
+position:[["ここ","koko","這裡"],["そこ","soko","那裡"],["あそこ","asoko","那邊"],["どこ","doko","哪裡"],["これ","kore","這個"],["それ","sore","那個"],["うえ","ue","上面"],["した","shita","下面"],["なか","naka","裡面"],["そと","soto","外面"],["ひだり","hidari","左"],["みぎ","migi","右"],["まえ","mae","前"],["うしろ","ushiro","後面"]],
+actions:[["いく","iku","去"],["くる","kuru","來"],["かえる","kaeru","回去"],["はいる","hairu","進去"],["でる","deru","出去"],["まって","matte","等等"],["ちょっとまって","chotto matte","等一下"],["みる","miru","看"],["きく","kiku","聽／問"],["はなす","hanasu","說話"],["する","suru","做"],["つかう","tsukau","用"],["かう","kau","買"],["あそぶ","asobu","玩"],["いっしょにあそぶ","issho ni asobu","一起玩"],["べんきょう","benkyou","學習"]],
+family:[["ちち","chichi","父／爸爸"],["おとうさん","otousan","爸爸"],["パパ","papa","爸爸（小孩／親暱）"],["おやじ","oyaji","爸爸（口語）"],["はは","haha","母／媽媽"],["おかあさん","okaasan","媽媽"],["ママ","mama","媽媽（小孩／親暱）"],["おふくろ","ofukuro","媽媽（口語）"],["あに","ani","哥哥"],["おにいさん","oniisan","哥哥（敬稱）"],["おにいちゃん","oniichan","哥哥（親暱）"],["あね","ane","姐姐"],["おねえさん","oneesan","姐姐（敬稱）"],["おねえちゃん","oneechan","姐姐（親暱）"],["おとうと","otouto","弟弟"],["いもうと","imouto","妹妹"],["きょうだい","kyoudai","兄弟姊妹（統稱）"],["しまい","shimai","姊妹"],["きょうだいしまい","kyoudai shimai","兄弟姊妹"],["そふ","sofu","祖父"],["じいちゃん","jiichan","爺爺（親暱）"],["おじいちゃん","ojiichan","爺爺（親暱）"],["そぼ","sobo","祖母"],["ばあちゃん","baachan","奶奶（親暱）"],["おばあちゃん","obaachan","奶奶（親暱）"],["むすこ","musuko","兒子"],["むすめ","musume","女兒"],["こども","kodomo","孩子"],["まご","mago","孫子／孫女"],["つま","tsuma","妻子（自己說）"],["よめ","yome","老婆／媳婦"],["おっと","otto","丈夫"],["だんな","danna","老公"],["はいぐうしゃ","haiguusha","配偶"],["りょうしん","ryoushin","父母"],["おや","oya","父母／家長"],["おやこ","oyako","親子"],["おじ","oji","叔叔／伯伯"],["おば","oba","阿姨／伯母"],["おい","oi","姪子／外甥"],["めい","mei","姪女／外甥女"],["いとこ","itoko","堂／表兄弟姊妹"],["しんせき","shinseki","親戚"],["ぎりのちち","giri no chichi","岳父／公公"],["ぎりのはは","giri no haha","岳母／婆婆"],["かぞく","kazoku","家人／家庭"],["かぞくいん","kazokuin","家庭成員"],["いっか","ikka","一家人"],["かてい","katei","家庭"],["うち","uchi","我家／家裡"],["じたく","jitaku","自己家"],["うちの","uchi no","我家的～"],["かぞくみんな","kazoku minna","全家人"],["かぞくぐるみ","kazokugurumi","全家一起"]],
+fps:[["てき","teki","敵人"],["てきいる","teki iru","有敵人"],["ここてき","koko teki","這裡有敵"],["ひとり","hitori","一個人"],["ふたり","futari","兩個人"],["すうにん","suu-nin","好幾個人"],["いる","iru","有人"],["いない","inai","沒人"],["じゅう","juu","槍"],["ぶき","buki","武器"],["だん","dan","子彈"],["だんない","dan nai","沒子彈"],["じゅうない","juu nai","沒槍"],["えいむ","eimu","瞄準"],["りろーど","riroodo","換彈"],["しゃげき","shageki","射擊"],["かばー","kabaa","掩護"],["らっしゅ","rasshu","衝鋒"],["ひくよ","hiku yo","要撤了"],["ふぁいと","faito","開打"],["おとす","otosu","擊倒"],["のっく","nokku","擊倒（未死）"],["だうん","daun","倒地"],["おこす","okosu","救人"],["おこして","okoshite","救我"],["あんち","anchi","安全區"],["あんちはいった","anchi haitta","進入安全區"],["あんちそと","anchi soto","在圈外"],["つぎあんち","tsugi anchi","下一個安全區"],["あーまー","aamaa","護甲"],["あーまーわれ","aamaa ware","護甲破了"],["しろあーまー","shiro aamaa","白甲"],["あおあーまー","ao aamaa","藍甲"],["むらさきあーまー","murasaki aamaa","紫甲"],["きんあーまー","kin aamaa","金甲"],["あかあーまー","aka aamaa","紅甲"],["ばってりー","batterii","電池"],["ばっくぱっく","bakkupakku","背包"],["けんさつ","kensatsu","檢查"],["そなえ","sona","補給"],["ぴん","pin","標記"]],
+emotion:[["まじ","maji","真的假的"],["やばい","yabai","糟了／很猛"],["すごい","sugoi","厲害"],["むずい","muzui","好難"],["きつい","kitsui","很硬／難打"],["いたい","itai","好痛"],["つらい","tsurai","難受"],["だるい","darui","好累／煩"],["なるほど","naruhodo","原來如此"],["たしかに","tashikani","確實"],["まあいい","maa ii","算了"],["こわい","kowai","可怕"],["うれしい","ureshii","開心"],["かなしい","kanashii","難過"],["いらいら","iraira","煩躁"],["はらがたつ","haragata tsu","生氣"],["かわいい","kawaii","可愛"],["つよい","tsuyoi","強大"],["すき","suki","喜歡"],["だいすき","daisuki","最喜歡"],["あい","ai","愛"],["いそがしい","isogashii","忙碌"],["たのしい","tanoshii","快樂"],["むずかしい","muzukashii","困難"],["かんたん","kantan","簡單"],["しんせつ","shinsetsu","親切"],["だいじ","daiji","重要"],["ゆめ","yume","夢想"],["きぼう","kibou","希望"],["せいちょう","seichou","成長"],["しっぱい","shippai","失敗"],["せいこう","seikou","成功"],["ちから","chikara","力量"],["こころ","kokoro","心"]],
+vocabulary:[["あう","au","見面"],["あける","akeru","打開（他）"],["あげる","ageru","給"],["あそぶ","asobu","玩"],["あびる","abiru","洗澡"],["ある","aru","有／存在"],["あるく","aruku","走路"],["いく","iku","去"],["いそぐ","isogu","趕快"],["いる","iru","在／需要"],["いれる","ireru","放進"],["うたう","utau","唱歌"],["うる","uru","賣"],["おきる","okiru","起床"],["おく","oku","放"],["おくる","okuru","送"],["おしえる","oshieru","教"],["おぼえる","oboeru","記住"],["かう","kau","買"],["かえる","kaeru","回去"],["かく","kaku","寫"],["かける","kakeru","掛／打電話"],["かりる","kariru","借"],["きく","kiku","聽／問"],["きえる","kieru","消失"],["くる","kuru","來"],["くれる","kureru","給我"],["けっこんする","kekkon suru","結婚"],["さす","sasu","撐／插"],["しぬ","shinu","死"],["すわる","suwaru","坐"],["たつ","tatsu","站"],["たべる","taberu","吃"],["つかう","tsukau","用"],["つくる","tsukuru","做／製造"],["てつだう","tetsudau","幫忙"],["とる","toru","拿／拍照"],["ならう","narau","學"],["のむ","nomu","喝"],["のる","noru","乘"],["はなす","hanasu","說話"],["まつ","matsu","等"],["もつ","motsu","持有"],["やすむ","yasumu","休息"],["よむ","yomu","讀"],["あおい","aoi","藍色的"],["あかい","akai","紅色的"],["あかるい","akarui","明亮的"],["あつい","atsui","熱的"],["あたたかい","atatakai","溫暖的"],["いそがしい","isogashii","忙的"],["うれしい","ureshii","高興的"],["おいしい","oishii","好吃的"],["おもしろい","omoshiroi","有趣的"],["かわいい","kawaii","可愛的"],["きいろい","kiiroi","黃色的"],["きれい","kirei","漂亮／乾淨"],["しずか","shizuka","安靜的"],["すき","suki","喜歡"],["きらい","kirai","討厭"],["たのしい","tanoshii","愉快的"],["たかい","takai","高的／貴的"],["ひくい","hikui","低的"],["やすい","yasui","便宜的"],["いえ","ie","房子"],["いす","isu","椅子"],["えき","eki","車站"],["うみ","umi","海"],["かわ","kawa","河川"],["やま","yama","山"],["くるま","kuruma","車"],["じてんしゃ","jitensha","自行車"],["でんしゃ","densha","電車"],["ひこうき","hikouki","飛機"],["ふね","fune","船"],["みず","mizu","水"],["おちゃ","ocha","茶"],["ぎゅうにゅう","gyuunyuu","牛奶"],["ごはん","gohan","飯／餐"],["たべもの","tabemono","食物"],["ひと","hito","人"],["ともだち","tomodachi","朋友"],["せんせい","sensei","老師"],["がくせい","gakusei","學生"],["かぞく","kazoku","家人"],["ちち","chichi","父親"],["はは","haha","母親"],["あに","ani","哥哥"],["あね","ane","姐姐"],["おとうと","otouto","弟弟"],["いもうと","imouto","妹妹"],["きょう","kyou","今天"],["きのう","kinou","昨天"],["あした","ashita","明天"],["まいにち","mainichi","每天"],["いま","ima","現在"],["じかん","jikan","時間"],["とき","toki","時候"],["はい","hai","是／對"],["いいえ","iie","不"],["ありがとう","arigatou","謝謝"],["すみません","sumimasen","不好意思／對不起"],["こんにちは","konnichiwa","你好"],["おはよう","ohayou","早安"],["こんばんは","konbanwa","晚上好"],["さようなら","sayounara","再見"],["いち","ichi","一"],["に","ni","二"],["さん","san","三"],["よん","yon","四"],["ご","go","五"],["ろく","roku","六"],["なな","nana","七"],["はち","hachi","八"],["きゅう","kyuu","九"],["じゅう","juu","十"],["ひゃく","hyaku","一百"],["せん","sen","一千"],["えん","en","日圓"],["いくら","ikura","多少錢"],["いくつ","ikutsu","幾個"],["げつようび","getsuyoubi","星期一"],["かようび","kayoubi","星期二"],["すいようび","suiyoubi","星期三"],["もくようび","mokuyoubi","星期四"],["きんようび","kinyoubi","星期五"],["どようび","doyoubi","星期六"],["にちようび","nichiyoubi","星期日"],["あさ","asa","早上"],["ひる","hiru","中午"],["ばん","ban","晚上"],["よる","yoru","夜晚"],["いま","ima","現在"],["さき","saki","之前"],["あと","ato","之後"],["すぐ","sugu","馬上"],["とき","toki","時候"],["まいあさ","maiasa","每天早上"],["まいばん","maiban","每天晚上"],["ここ","koko","這裡"],["そこ","soko","那裡"],["あそこ","asoko","那邊"],["どこ","doko","哪裡"],["こちら","kochira","這邊（禮貌）"],["みぎ","migi","右"],["ひだり","hidari","左"],["うえ","ue","上面"],["した","shita","下面"],["なか","naka","裡面"],["そと","soto","外面"],["まえ","mae","前面"],["うしろ","ushiro","後面"],["ちかく","chikaku","附近"],["とおい","tooi","遠的"],["すこし","sukoshi","一點"],["たくさん","takusan","很多"],["ぜんぶ","zenbu","全部"],["いっしょに","issho ni","一起"],["また","mata","再一次"],["まだ","mada","還沒"],["もう","mou","已經"],["とても","totemo","非常"],["あまり","amari","不太"],["ぜんぜん","zenzen","完全不"],["なに","nani","什麼"],["だれ","dare","誰"],["いつ","itsu","什麼時候"],["どう","dou","怎麼樣"],["どうして","doushite","為什麼"],["どれ","dore","哪一個"],["どの","dono","哪個（修飾）"],["いる","iru","在（人／動物）"],["いない","inai","不在"],["ある","aru","有（物）"],["ない","nai","沒有"],["だいじょうぶ","daijoubu","沒問題"],["ひま","hima","有空"],["いそがしい","isogashii","忙碌的"],["がっこう","gakkou","學校"],["かいしゃ","kaisha","公司"],["みせ","mise","商店"],["びょういん","byouin","醫院"],["えき","eki","車站"],["うち","uchi","家"],["へや","heya","房間"],["トイレ","toire","廁所"],["かさ","kasa","雨傘"],["かばん","kaban","包包"],["くつ","kutsu","鞋子"],["くつした","kutsushita","襪子"],["ぼうし","boushi","帽子"],["ふく","fuku","衣服"],["めがね","megane","眼鏡"],["とけい","tokei","時鐘"],["いい","ii","好／可以"],["だめ","dame","不行"],["わかる","wakaru","懂"],["わからない","wakaranai","不懂"],["しる","shiru","知道"],["しらない","shiranai","不知道"],["おねがいします","onegaishimasu","拜託了"],["どうぞ","douzo","請"],["どうも","doumo","謝謝／嗨"],["からだ","karada","身體"],["あたま","atama","頭"],["かみ","kami","頭髮"],["かお","kao","臉"],["め","me","眼睛"],["みみ","mimi","耳朵"],["はな","hana","鼻子"],["くち","kuchi","嘴巴"],["は","ha","牙齒"],["くび","kubi","脖子"],["かた","kata","肩膀"],["うで","ude","手臂"],["て","te","手"],["ゆび","yubi","手指"],["おなか","onaka","肚子"],["あし","ashi","腳"],["ひざ","hiza","膝蓋"],["せ","se","背"],["どうぶつ","doubutsu","動物"],["いぬ","inu","狗"],["ねこ","neko","貓"],["とり","tori","鳥"],["うし","ushi","牛"],["ぶた","buta","豬"],["うま","uma","馬"],["さかな","sakana","魚"],["にわとり","niwatori","雞"],["ぞう","zou","大象"],["たべもの","tabemono","食物"],["ごはん","gohan","飯"],["パン","pan","麵包"],["にく","niku","肉"],["やさい","yasai","蔬菜"],["くだもの","kudamono","水果"],["りんご","ringo","蘋果"],["みかん","mikan","橘子"],["いちご","ichigo","草莓"],["たまご","tamago","雞蛋"],["さかな","sakana","魚"],["ケーキ","keeki","蛋糕"],["あめ","ame","糖果"],["うどん","udon","烏冬麵"],["そば","soba","蕎麥麵"],["ラーメン","raamen","拉麵"],["すし","sushi","壽司"],["おべんとう","obentou","便當"],["のみもの","nomimono","飲料"],["みず","mizu","水"],["おちゃ","ocha","茶"],["こうちゃ","koucha","紅茶"],["コーヒー","koohii","咖啡"],["ぎゅうにゅう","gyuunyuu","牛奶"],["ジュース","juusu","果汁"],["さけ","sake","酒"],["いろ","iro","顏色"],["あか","aka","紅色"],["あお","ao","藍色"],["しろ","shiro","白色"],["くろ","kuro","黑色"],["きいろ","kiiro","黃色"],["みどり","midori","綠色"],["ちゃいろ","chairo","棕色"],["てんき","tenki","天氣"],["はれ","hare","晴天"],["あめ","ame","雨"],["ゆき","yuki","雪"],["くもり","kumori","陰天"],["かぜ","kaze","風"],["そら","sora","天空"],["やま","yama","山"],["かわ","kawa","河川"],["うみ","umi","海"],["つくえ","tsukue","桌子"],["いす","isu","椅子"],["ベッド","beddo","床"],["ドア","doa","門"],["まど","mado","窗戶"],["でんき","denki","電燈／電"],["テレビ","terebi","電視"],["れいぞうこ","reizouko","冰箱"],["あつい","atsui","熱的"],["さむい","samui","冷的"],["つめたい","tsumetai","冰的"],["いたい","itai","痛的"],["つかれた","tsukareta","累了"],["げんき","genki","有精神"],["ひと","hito","人"],["ともだち","tomodachi","朋友"],["なまえ","namae","名字"],["こと","koto","事情"],["もの","mono","東西"],["ばしょ","basho","地方"],["とき","toki","時候"],["いい","ii","好的"],["わるい","warui","壞的"],["あつい","atsui","熱的（天氣／物）"],["さむい","samui","冷的（天氣）"],["つめたい","tsumetai","冰冷的（物）"],["あたたかい","atatakai","溫暖的"],["おもしろい","omoshiroi","有趣的"],["つまらない","tsumaranai","無聊的"],["たのしい","tanoshii","開心的"],["かなしい","kanashii","悲傷的"],["こわい","kowai","可怕的"],["いたい","itai","痛的"],["つかれた","tsukareta","累了"],["ねむい","nemui","想睡的"],["おおきい","ookii","大的"],["ちいさい","chiisai","小的"],["たかい","takai","高的／貴的"],["ひくい","hikui","低的"],["ながい","nagai","長的"],["みじかい","mijikai","短的"],["とおい","tooi","遠的"],["ちかい","chikai","近的"],["ひろい","hiroi","寬廣的"],["せまい","semai","狹窄的"],["はやい","hayai","快的／早的"],["おそい","osoi","慢的／晚的"],["おおい","ooi","多的"],["すくない","sukunai","少的"],["おもい","omoi","重的"],["かるい","karui","輕的"],["おいしい","oishii","好吃的"],["まずい","mazui","不好吃的"],["あまい","amai","甜的"],["からい","karai","辣的"],["にがい","nigai","苦的"],["すっぱい","suppai","酸的"],["あたらしい","atarashii","新的"],["ふるい","furui","舊的"],["きれい","kirei","乾淨／漂亮的"],["きたない","kitanai","髒的"],["しずか","shizuka","安靜的"],["にぎやか","nigiyaka","熱鬧的"],["ひま","hima","有空的"],["いそがしい","isogashii","忙的"],["べんり","benri","方便的"],["ふべん","fuben","不方便的"],["げんき","genki","有精神的"],["だいじょうぶ","daijoubu","沒問題的"],["たいへん","taihen","辛苦的／嚴重的"],["あんぜん","anzen","安全的"],["すき","suki","喜歡的"],["きらい","kirai","討厭的"],["じょうず","jouzu","擅長的"],["へた","heta","不擅長的"],["しんせつ","shinsetsu","親切的"],["ゆうめい","yuumei","有名的"],["たいせつ","taisetsu","重要的"],["ひつよう","hitsuyou","必要的"],["あか","aka","紅色"],["あお","ao","藍色"],["しろ","shiro","白色"],["くろ","kuro","黑色"],["きいろ","kiiro","黃色"],["みどり","midori","綠色"],["ちゃいろ","chairo","棕色"],["いろいろ","iroiro","各式各樣的"],["べつ","betsu","不同的"],["おなじ","onaji","一樣的"],["だめ","dame","不行的"],["いく","iku","去"],["くる","kuru","來"],["かえる","kaeru","回去"],["ある","aru","有（物）"],["いる","iru","有（人／動物）"],["はいる","hairu","進入"],["でる","deru","出去"],["のる","noru","搭乘"],["おりる","oriru","下車"],["つく","tsuku","到達"],["でかける","dekakeru","外出"],["する","suru","做"],["やる","yaru","做（較口語）"],["つかう","tsukau","使用"],["もつ","motsu","拿／持有"],["とる","toru","拿／拍照"],["おく","oku","放置"],["あける","akeru","打開"],["しめる","shimeru","關上"],["いれる","ireru","放進"],["だす","dasu","拿出"],["たべる","taberu","吃"],["のむ","nomu","喝"],["ねる","neru","睡"],["おきる","okiru","起床"],["あびる","abiru","洗（澡）"],["やすむ","yasumu","休息"],["はたらく","hataraku","工作"],["べんきょうする","benkyou suru","學習"],["いう","iu","說"],["はなす","hanasu","說話"],["きく","kiku","聽／問"],["よむ","yomu","讀"],["かく","kaku","寫"],["みる","miru","看"],["みせる","miseru","給看"],["おしえる","oshieru","教"],["ならう","narau","學"],["あげる","ageru","給（對外）"],["くれる","kureru","給我"],["もらう","morau","得到"],["あう","au","見面"],["まつ","matsu","等待"],["かう","kau","買"],["うる","uru","賣"],["はらう","harau","付錢"],["かりる","kariru","借入"],["かす","kasu","借出"],["なる","naru","變成"],["はじまる","hajimaru","開始（自）"],["はじめる","hajimeru","開始（他）"],["おわる","owaru","結束"],["つづく","tsuzuku","持續"],["やめる","yameru","停止／辭掉"],["わかる","wakaru","懂"],["しる","shiru","知道"],["おぼえる","oboeru","記住"],["わすれる","wasureru","忘記"],["できる","dekiru","能做"],["あるく","aruku","走"],["はしる","hashiru","跑"],["あめがふる","ame ga furu","下雨"],["ゆきがふる","yuki ga furu","下雪"],["いたい","itai","痛"],["つかれる","tsukareru","累"],["なおる","naoru","痊癒"],["つれていく","tsurete iku","帶去"],["つれてくる","tsurete kuru","帶來"],["もっていく","motte iku","帶去"],["もってくる","motte kuru","帶來"],["すわる","suwaru","坐"],["たつ","tatsu","站"],["あそぶ","asobu","玩"],["しぬ","shinu","死"],["すむ","sumu","住"],["ひっこす","hikkosu","搬家"],["けっこんする","kekkon suru","結婚"],["うまれる","umareru","出生"],["なくす","nakusu","弄丟"],["みつける","mitsukeru","找到"],["かかる","kakaru","花費（時間／錢）"],
+["いる","iru","需要"],["あんしんする","anshin suru","安心"],["いそがしくなる","isogashiku naru","變忙"],["うごかす","ugokasu","移動／使動"],["うまれる","umareru","出生"],["えらぶ","erabu","選擇"],["おこる","okoru","生氣／發生"],["おとす","otosu","掉落"],["おどろく","odoroku","吃驚"],["おぼれる","oboreru","溺水"],["かえる","kaeru","改變"],["かかる","kakaru","花費／掛上"],["かんがえる","kangaeru","思考"],["きまる","kimaru","決定（自動）"],["くらべる","kuraberu","比較"],["けがする","kega suru","受傷"],["こまる","komaru","困擾"],["さがす","sagasu","尋找"],["さそう","sasou","邀請"],["しらべる","shiraberu","調查"],["すぎる","sugiru","超過"],["そだてる","sodateru","培養"],["たす","tasu","加"],["たりる","tariru","足夠"],["つづける","tsuzukeru","持續"],["つづく","tsuzuku","持續（自動）"],["なおす","naosu","修理／改正"],["なくす","nakusu","弄丟"],["ならぶ","narabu","排隊"],["はこぶ","hakobu","搬運"],["はじまる","hajimaru","開始（自動）"],["はじめる","hajimeru","開始（他動）"],["ふえる","fueru","增加（自動）"],["へる","heru","減少"],["ほめる","homeru","稱讚"],["まにあう","maniau","趕得上"],["みつかる","mitsukaru","被找到"],["みつける","mitsukeru","找到"],["やくにたつ","yakunitatsu","有幫助"],["やく","yaku","燒／烤"],["よごれる","yogoreru","變髒"],["わかれる","wakareru","分開"],["あんぜん","anzen","安全"],["いじょう","ijou","異常"],["いっぱんてき","ippanteki","一般的"],["うそ","uso","謊言"],["おおぜい","oozei","很多人"],["おたがい","otagai","彼此"],["かのう","kanou","可能"],["きけん","kiken","危險"],["きそく","kisoku","規則"],["きんえん","kinen","禁菸"],["くうき","kuuki","氣氛／空氣"],["けいけん","keiken","經驗"],["けっか","kekka","結果"],["こうどう","koudou","行動"],["こうつう","koutsuu","交通"],["こしょう","koshou","故障"],["さいきん","saikin","最近"],["しっぱい","shippai","失敗"],["しゅっぱつ","shuppatsu","出發"],["じゅうぶん","juubun","充分"],["じゆう","jiyuu","自由"],["せいこう","seikou","成功"],["せきにん","sekinin","責任"],["せつめい","setsumei","說明"],["ぜったい","zettai","絕對"],["そうだん","soudan","商量"],["ちゅうい","chuui","注意"],["ひつよう","hitsuyou","必要"],["ふくざつ","fukuzatsu","複雜"],["へん","hen","奇怪"],["べんごし","bengoshi","律師"],["ほんとう","hontou","真的"],["まちがい","machigai","錯誤"],["むり","muri","勉強"],["よてい","yotei","預定"],["りゆう","riyuu","理由"],["あんない","annai","導覽"],["いなか","inaka","鄉下"],["うけつけ","uketsuke","櫃檯"],["えいぎょう","eigyou","營業"],["おいしゃさん","oishasan","醫生"],["おくじょう","okujou","屋頂"],["おくりもの","okurimono","禮物"],["かいだん","kaidan","樓梯"],["かいもの","kaimono","購物"],["かみなり","kaminari","雷"],["きかい","kikai","機器"],["きしゃ","kisha","記者"],["きょうかい","kyoukai","教會"],["けいさつ","keisatsu","警察"],["こうじ","kouji","工程"],["こしょう","koshou","故障"],["しんぶん","shinbun","報紙"],["すいどう","suidou","自來水"],["せいかつ","seikatsu","生活"],["せき","seki","座位"],["たいふう","taifuu","颱風"],["でんとう","dentou","電燈"],["にもつ","nimotsu","行李"],["ばしょ","basho","場所"],["びょうき","byouki","疾病"],["へんじ","henji","回覆"],["ほうほう","houhou","方法"],["まち","machi","街道"],["むら","mura","村莊"],["やくしょ","yakusho","公所"],["よる","yoru","夜晚"],["りょこう","ryokou","旅行"],["あいだ","aida","之間"],["あまり","amari","不太～"],["いがい","igai","以外"],["いちど","ichido","一次"],["いつか","itsuka","某天"],["いっしょうけんめい","isshoukenmei","拼命地"],["いままで","ima made","到現在為止"],["おなじ","onaji","相同"],["かなり","kanari","相當"],["きっと","kitto","一定"],["このあいだ","kono aida","前幾天"],["このごろ","kono goro","最近"],["こんど","kondo","這次／下次"],["さきに","saki ni","先"],["しばらく","shibaraku","暫時"],["すぐ","sugu","立刻"],["ずっと","zutto","一直"],["すべて","subete","全部"],["それに","sore ni","而且"],["それでも","soredemo","即使如此"],["そんなに","sonna ni","那麼"],["たいてい","taitei","大多"],["たぶん","tabun","大概"],["ちょうど","choudo","剛好"],["だんだん","dandan","漸漸"],["つい","tsui","不小心"],["とくに","toku ni","特別是"],["とちゅう","tochuu","途中"],["なかなか","nakanaka","相當／不太～"],["なるべく","narubeku","盡量"],["はじめて","hajimete","第一次"],["もうすぐ","mou sugu","快要"],["もっと","motto","更加"],["もし","moshi","如果"],["もちろん","mochiron","當然"],["やっと","yatto","終於"],["ゆっくり","yukkuri","慢慢地"],["よく","yoku","經常"],["わざと","wazato","故意地"],["ように","you ni","為了～／希望～"],["ために","tame ni","為了～／因為～"],["ことにする","koto ni suru","決定要～"],["ことになる","koto ni naru","變成～（結果）"],["ば","ba","如果～的話"],["たら","tara","如果～之後"],["ながら","nagara","一邊～一邊～"],["そうだ","sou da","聽說～"],["そうに","sou ni","看起來～"],["みたい","mitai","好像～"],["らしい","rashii","好像～／聽說～"],["はず","hazu","應該～"],["つもり","tsumori","打算～"],["ばかり","bakari","剛剛～／只～"],["ところ","tokoro","正要～／正在～"],["まで","made","到～為止"],["しか～ない","shika nai","只有～"],["ほど","hodo","到～程度"],["くらい","kurai","大約～"],["など","nado","等等"],["でも","demo","即使～也～"],["けれど","keredo","但是"],["のに","noni","明明～卻～"],["について","ni tsuite","關於～"],["によって","ni yotte","依照～／因為～"],["にかわって","ni kawatte","代替～"],["にくらべて","ni kurabete","和～相比"],["をはじめ","wo hajime","以～為首"],["にちがいない","ni chigai nai","一定～"],["ようだ","you da","似乎～"],["ばあい","baai","在～情況下"],["とおり","toori","按照～"],["たびに","tabi ni","每當～"],["ところで","tokoro de","順帶一提"],["つまり","tsumari","也就是說"],["そのまま","sono mama","照原樣"],["いじょう","ijou","以上"],["いか","ika","以下"],["いない","inai","不在"],["らく","raku","輕鬆"],["むり","muri","不可能"],["ちゅうい","chuui","注意"],["けいけん","keiken","經驗"],["りゆう","riyuu","理由"],["けっか","kekka","結果"],["もくてき","mokuteki","目的"],["ばめん","bamen","場合／場面"],["ばあいによって","baai ni yotte","視情況而定"],["きかい","kikai","機會"],["じゅんび","junbi","準備"],["よてい","yotei","計畫"],["けいかく","keikaku","計畫"],["ちゅうし","chuushi","中止"],["けってい","kettei","決定"]],
+N5:[
+["わたし","我"],["あなた","你"],["あのひと","那個人"],["ひと","人"],["ともだち","朋友"],["かぞく","家人"],["せんせい","老師"],["がくせい","學生"],["いしゃ","醫生"],["かいしゃいん","公司職員"],["いま","現在"],["きょう","今天"],["あした","明天"],["きのう","昨天"],["あさ","早上"],["ひる","中午"],["よる","晚上"],["ばん","夜晚"],["とき","時候"],["じ","點（時間）"],["いっぷん","1分鐘"],["ごふん","5分鐘"],["じかん","時間"],["ようび","星期"],["げつようび","星期一(月曜日)"],["かようび","星期二(火曜日)"],["すいようび","星期三(水曜日)"],["もくようび","星期四(木曜日)"],["きんようび","星期五(金曜日)"],["どようび","星期六(土曜日)"],["にちようび","星期日(日曜日)"],["いえ","家"],["うち","我家"],["がっこう","學校"],["だいがく","大學"],["みせ","店"],["えき","車站"],["くに","國家"],["まち","城市"],["むら","村莊"],["ばしょ","地方"],["ほん","書"],["てがみ","信"],["かぎ","鑰匙"],["かばん","包包"],["さいふ","錢包"],["くるま","車"],["じてんしゃ","腳踏車"],["でんわ","電話"],["しゃしん","照片"],["え","圖畫"],["たべる","吃"],["のむ","喝"],["いく","去"],["くる","來"],["かえる","回去"],["みる","看"],["きく","聽／問"],["はなす","說"],["よむ","讀"],["かく","寫"],["する","做"],["つかう","使用"],["かう","買"],["うる","賣"],["まつ","等"],["あそぶ","玩"],["はたらく","工作"],["ねる","睡覺"],["おきる","起床"],["べんきょうする","學習"],["いい","好"],["わるい","壞"],["おおきい","大"],["ちいさい","小"],["たかい","高／貴"],["やすい","便宜"],["あたらしい","新"],["ふるい","舊"],["あつい","熱／厚"],["さむい","冷"],["げつ","月"],["か","火"],["すい","水"],["もく","木"],["きん","金"],["ど","土"],["にち","日"]],
+};
+
+function loadData(){
+    const lv = level.value;
+
+    if(lv === "allCombined"){
+        // 合併所有分類單字（保持每行資料獨立）
+        pool = [
+          ...data.basic,
+          ...data.daku,
+          ...data.you,
+          ...data.basic1,
+          ...data.daku1,
+          ...data.you1,
+          ...data.basicResponse,
+          ...data.position,
+          ...data.actions,
+          ...data.family,
+          ...data.fps,
+          ...data.emotion,
+        ];
+    } else if(lv === "all"){
+        pool = [...data.words];
+    } else if(lv === "kanaAll") {
+        pool = [...data.basic, ...data.daku, ...data.you, ...data.basic1, ...data.daku1, ...data.you1 ];
+    } else {
+        pool = [...data[lv]];
+    }
+
+    if(orderRandom) pool.sort(() => Math.random() - 0.5);
+
+grid.innerHTML = "";
+pool.forEach(k => {
+    const c = document.createElement("div");
+    c.className = "card";
+
+if(k.length >= 3){
+    c.innerHTML = `
+      <p>
+        <strong>${k[0]}</strong><br>
+        <span class="roma-word">(${k[1]})</span><br>
+        ${k[2]}
+      </p>
+    `;
+} else {
+    c.innerHTML = `<p><strong>${k[0]}</strong><br>${k[1]}</p>`;
+}
+    grid.appendChild(c);
+});
+}
+
+function startQuiz(t, m) {
+    quizType = t;
+    quizMode = m;
+    questionIndex = 0;
+    examScore = 0;
+    wrongList = [];
+    answerList = [];
+
+    let availableQuestions = pool.length;
+
+if (quizMode === "exam") {
+    // 題目數 = 單字總數 + 0（也就是全部題庫）
+    const numQuestions = availableQuestions; // 原本減1的地方去掉
+    quizPool = [...pool].sort(() => Math.random() - 0.5).slice(0, numQuestions);
+}
+ else {
+        // 練習模式：整個題庫、隨機
+        quizPool = [...pool].sort(() => Math.random() - 0.5);
+    }
+
+    modal.style.display = "flex";
+    grid.style.display = "none";
+    nextQuestion();
+}
+
+function stopQuiz() {
+    modal.style.display = "none";
+    grid.style.display = "grid";
+    loadData();
+
+    const answered = answerList.length;       // 已作答題數
+    const correct = examScore;                // 答對題數
+
+    if (quizMode === "exam" || quizMode === "practice") {
+        if (wrongList.length) showReview();  // 無論考試或練習，只要有錯題就顯示
+
+        if (quizMode === "exam") {
+            alert(`考試結束：${correct}/${quizPool.length} （已答題：${answered}）`);
+        } else if (quizMode === "practice") {
+            alert(`練習結束：${correct}/${answered}`);
+        }
+    }
+}
+
+function nextQuestion() {
+if (questionIndex >= quizPool.length) {
+    if (quizMode === "exam") {
+        stopQuiz();
+        return;
+    } else {
+        // 練習模式：重新洗牌、從頭來
+        questionIndex = 0;
+        quizPool.sort(() => Math.random() - 0.5);
+    }
+}
+    answer = quizPool[questionIndex];
+    questionIndex++;
+
+question.innerHTML =
+    quizType === "roma"
+    ? `${quizMode === "exam" ? questionIndex + ". " : ""}${answer[0]}<br><span style="font-size:14px;color:#aaa;">（${answer[2]||""}）</span>`
+    : `${quizMode === "exam" ? questionIndex + ". " : ""}${answer[1]}<br><span style="font-size:14px;color:#aaa;">（${answer[2]||""}）</span>`;
+
+    const box = choices;
+    box.innerHTML = "";
+
+    const opts = [answer];
+    while (opts.length < 4) {
+        const r = pool[Math.floor(Math.random() * pool.length)];
+        if (!opts.includes(r)) opts.push(r);
+    }
+    opts.sort(() => Math.random() - 0.5);
+
+opts.forEach((o, i) => {
+        const b = document.createElement("div");
+        b.className = "choice";
+        b.innerText = `${i + 1}. ` + (quizType === "roma" ? o[1] : o[0]);
+        b.innerText = `${i + 1}. ` + (quizType === "roma" ? o[1] : o[0]);
+        b.dataset.correct = (o === answer);
+b.onclick = () => {
+if (quizMode === "practice") {
+    if (b.dataset.locked === "true") return;
+    Array.from(box.children).forEach(c => c.dataset.locked = "true");
+
+    const isCorrect = (o === answer);
+
+    // 記錄作答
+    const record = {
+        qNum: questionIndex,
+        kana: answer[0],
+        roma: answer[1],
+        mean: answer[2] || "",
+        chosenText: quizType === "roma" ? o[1] : o[0],
+        chosenMean: o[2] || "",
+        correctText: quizType === "roma" ? answer[1] : answer[0],
+        correctMean: answer[2] || "",
+        mode: quizType,
+        correct: isCorrect
+    };
+    answerList.push(record);
+
+    // 答對累加
+    if (isCorrect) examScore++;
+    else wrongList.push(record); // ← 把錯題加入 wrongList
+
+    // 顯示顏色提示
+    if (isCorrect) {
+        b.style.backgroundColor = "#81c784";
+    } else {
+        b.style.backgroundColor = "#ef5350";
+        Array.from(box.children).forEach(c => {
+            if (c.dataset.correct === "true") c.style.backgroundColor = "#81c784";
+        });
+    }
+
+    setTimeout(nextQuestion, 600);
+}
+
+    // 考試模式維持原本行為
+    if (quizMode === "exam") {
+        const isCorrect = (o === answer);
+        answerList.push({
+            qNum: questionIndex,
+            kana: answer[0],
+            roma: answer[1],
+            mean: answer[2] || "",
+            chosenText: quizType === "roma" ? o[1] : o[0],
+            chosenMean: o[2] || "",
+            correctText: quizType === "roma" ? answer[1] : answer[0],
+            correctMean: answer[2] || "",
+            mode: quizType,
+            correct: isCorrect
+        });
+        if (!isCorrect) wrongList.push(answerList.at(-1));
+        if (isCorrect) examScore++;
+        nextQuestion();
+    }
+};
+        box.appendChild(b);
+    });
+}
+
+function showReview() {
+    const overlay = document.createElement("div");
+    overlay.className = "reviewOverlay";
+    const box = document.createElement("div");
+    box.className = "reviewBox";
+    box.innerHTML = "<h3>❌ 錯誤題目</h3>";
+
+    let wrongCounter = 0;
+
+    answerList.forEach((w) => {
+        const questionDisplay = w.mode === "roma" ? `${w.kana}（${w.mean}）` : `${w.roma}（${w.mean}）`;
+        const chosenDisplay = `${w.chosenText}（${w.chosenMean}）`;
+        const answerDisplay = w.mode === "roma" ? `${w.roma}（${w.mean}）` : `${w.kana}（${w.mean}）`;
+
+        // 題號遞增
+        wrongCounter++;
+
+        box.innerHTML += `
+        <div class="reviewItem">
+            第${wrongCounter}題<br>
+            ${questionDisplay}<br>
+${w.correct
+  ? `<span class="reviewCorrect">你選：${chosenDisplay}</span>`
+  : `
+    <span class="reviewWrong">你選：${chosenDisplay}</span><br>
+    <span class="reviewCorrect">正確：${answerDisplay}</span>
+  `
+}
+        </div>`;
+    });
+
+    const btn = document.createElement("button");
+    btn.innerText = "關閉";
+    btn.onclick = () => overlay.remove();
+    box.appendChild(btn);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+}
+
+loadData();
+</script>
+
+</body>
+</html>
